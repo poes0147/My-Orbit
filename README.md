@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# My Orbit
 
-## Getting Started
+취업·창업을 준비하는 청년이 자신의 경험과 강점을 AI와 함께 정리하고, 모바일 프로필과 직접 만든 NFC 클레이 오브제(‘나의 별’)로 소개하도록 돕는 퍼스널 브랜딩 서비스입니다. 초기에는 대학·청년지원기관 워크숍에서 사용성을 검증합니다.
 
-First, run the development server:
+## 기술 스택
+
+Next.js App Router · React · TypeScript · Tailwind CSS · Supabase(PostgreSQL·Auth·Storage, 연결 예정) · Vercel(배포 예정)
+
+## 개발 시작
+
+필요 환경: Node.js LTS와 npm
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+개발 서버는 [http://localhost:3000](http://localhost:3000)에서 확인합니다. 환경 변수와 Supabase 프로젝트는 아직 연결되지 않았습니다. 인증·DB 기능을 개발할 때 필요한 변수는 연동 방식이 확정된 뒤 `.env.example`에 설명하고, 실제 값은 `.env.local`에 둡니다. 환경 변수 파일은 Git에 올리지 않습니다.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| 명령 | 내용 |
+|---|---|
+| `npm run dev` | 로컬 개발 서버 실행 |
+| `npm run lint` | ESLint 검사 |
+| `npm run build` | Next.js 프로덕션 빌드 |
+| `npm run start` | 빌드 결과 실행 |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 현재 상태
 
-## Learn More
+저장소는 초기 화면과 라우트 골격을 만드는 단계입니다. 로그인 화면과 대시보드 화면은 있지만 로그인 버튼은 Supabase 연결 전이라 비활성화되어 있고, 대시보드 데이터도 실제 DB와 연결되지 않았습니다. 공개 프로필, NFC 태그 연결, AI 인터뷰, 강사 기능도 완성된 서비스 기능으로 보면 안 됩니다.
 
-To learn more about Next.js, take a look at the following resources:
+Supabase 프로젝트 생성과 인증 설정은 별도 선행 작업입니다. 배포 계정과 자동 배포도 아직 연결되지 않았습니다. 완료된 기능은 실제 동작과 인수 조건을 확인한 뒤에만 완료로 표시합니다.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 주요 경로
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| 경로 | 용도 |
+|---|---|
+| `/login` | 참여자 로그인 진입 화면 |
+| `/session` | 워크숍 참여 세션 진입 |
+| `/builder` | 프로필 작성 영역 |
+| `/dashboard` | 참여자 프로필·진행 현황 |
+| `/settings` | 계정 설정 |
+| `/p/{user_slug}` | 외부 방문자용 공개 프로필 |
+| `/t/{tag_id}` | NFC 태그 진입·프로필 연결 |
+| `/instructor` | 강사용 운영 화면 |
 
-## Deploy on Vercel
+위 경로 중 일부는 현재 화면 골격만 있습니다. 실제 라우트와 기능 상태는 코드를 기준으로 확인하세요.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 개발 흐름
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+기능 요구사항과 인수 조건은 ign8t 프로젝트 문서와 작업 스펙을 기준으로 합니다. 구현을 시작하기 전에 기준 컨텍스트·마스터 스펙·다음 작업을 확인하고, 선택한 작업의 상세 스펙이 없으면 먼저 보완합니다. 스펙에 없는 구현을 임의로 추가하지 않습니다.
+
+작은 수정은 현재 개발 흐름에 맞춰 처리하고, 페이지나 중간 규모 기능은 전용 작업 브랜치에서 진행합니다. 작업 내용을 `dev`에 반영할 때는 변경 사항과 확인 결과를 설명하는 PR을 남깁니다. `main`은 상용 배포용으로 유지합니다. 현재 배포 연결 상태는 README의 “현재 상태”를 확인하세요.
+
+개발 전에 변경할 스택에 적합한 모델을 먼저 추천하고, 사용자가 이해하기 쉽도록 현재 단계와 막힌 이유를 쉬운 말로 공유합니다.
+
+## 제품 원칙
+
+- 공개 프로필에는 사용자가 확인하고 공개하기로 한 정보만 표시합니다.
+- 이력서 원본과 AI 대화 등 개인 자료는 비공개로 취급하고, 강사 화면에도 기본적으로 노출하지 않습니다.
+- DB 접근은 서버 권한 확인과 Supabase RLS 정책을 함께 적용합니다. UI에서 버튼을 숨기는 것만으로 권한을 보호하지 않습니다.
+- NFC는 태그에 미리 기록된 URL을 서버에서 프로필로 연결합니다. 브라우저에서 NFC 칩에 직접 쓰는 기능은 제품 범위에 포함하지 않습니다.
+
+## 문서
+
+- [`AGENTS.md`](./AGENTS.md): Codex가 작업 전에 읽는 저장소 지침과 개발 합의
+- ign8t: 승인된 제품 마스터 스펙, 작업 목록 및 기능별 작업 스펙
