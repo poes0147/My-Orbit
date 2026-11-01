@@ -1,0 +1,3 @@
+export const instant = false;
+
+export default async function PublicProfilePage({ params }: PageProps<"/p/[user_slug]">) { const { user_slug } = await params; return <article className="px-6 py-12"><p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">My Orbit · 소개</p><div className="mt-8 grid size-20 place-items-center rounded-full bg-amber-100 text-3xl">✦</div><h1 className="mt-5 text-3xl font-semibold tracking-tight">나의 프로필</h1><p className="mt-2 text-stone-600">이야기를 담은 프로필이 곧 이곳에 연결됩니다.</p><p className="mt-8 border-t border-stone-100 pt-4 text-xs text-stone-400">프로필 코드 · {user_slug}</p><button className="mt-8 min-h-12 rounded-xl bg-stone-900 px-5 font-medium text-white">연락처 저장</button></article>; }

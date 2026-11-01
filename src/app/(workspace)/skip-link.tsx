@@ -1,0 +1,1 @@
+export default function SkipLink() { return <a href="#main-content" className="sr-only z-50 rounded bg-white p-3 text-stone-950 focus:not-sr-only focus:fixed focus:left-3 focus:top-3">본문으로 건너뛰기</a>; }

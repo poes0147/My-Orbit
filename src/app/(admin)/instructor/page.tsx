@@ -1,0 +1,1 @@
+export default function InstructorPage() { return <section><p className="text-sm font-medium text-amber-700">워크숍 운영</p><h1 className="mt-2 text-3xl font-semibold">참여 현황</h1><div className="mt-6 rounded-2xl border border-stone-200 bg-white p-6 text-stone-600">세션을 선택하면 참여자 진행 상황이 표시됩니다.</div></section>; }

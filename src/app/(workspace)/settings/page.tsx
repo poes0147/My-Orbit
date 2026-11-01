@@ -1,0 +1,1 @@
+export default function SettingsPage() { return <section><p className="text-sm font-semibold text-amber-700">내 공간</p><h1 className="mt-2 text-2xl font-semibold">설정</h1><p className="mt-3 text-stone-600">계정과 공개 범위 설정이 이곳에 표시됩니다.</p></section>; }
