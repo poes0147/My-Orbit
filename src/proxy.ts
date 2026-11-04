@@ -16,9 +16,10 @@ export async function proxy(request: NextRequest) {
         return respond(NextResponse.redirect(new URL("/session", request.url)));
       }
     }
-    if (request.nextUrl.pathname.startsWith("/instructor")) {
+    if (request.nextUrl.pathname.startsWith("/instructor") || request.nextUrl.pathname.startsWith("/admin")) {
       const { data: profile, error: roleError } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle();
-      if (roleError || profile?.role !== "instructor") return respond(new NextResponse("강사 권한이 필요합니다.", { status: 403 }));
+      const requiredRole = request.nextUrl.pathname.startsWith("/admin") || request.nextUrl.pathname === "/instructor/sessions" ? "admin" : "instructor";
+      if (roleError || profile?.role !== requiredRole) return respond(new NextResponse("이 화면에 접근할 권한이 없습니다.", { status: 403 }));
     }
     return respond();
   } catch {
@@ -27,5 +28,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/builder/:path*", "/dashboard/:path*", "/session/:path*", "/settings/:path*", "/t/bind", "/instructor/:path*"],
+  matcher: ["/builder/:path*", "/dashboard/:path*", "/session/:path*", "/settings/:path*", "/t/bind", "/instructor/:path*", "/admin/:path*"],
 };
