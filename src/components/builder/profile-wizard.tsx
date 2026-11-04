@@ -1,31 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useProfileStream } from "@/lib/builder/use-profile-stream";
+import { createWizardPayload, initialDraft, toneOptions, validateDraft, valueOptions, type Draft, type DraftErrors, type WizardPayload } from "@/lib/builder/draft";
 
 const steps = ["경험 키워드", "역할과 성과", "가치관과 소개 톤"];
-const values = ["성장", "협업", "창의성", "문제 해결", "꾸준함", "새로운 도전"];
-const tones = ["차분하고 전문적으로", "친근하고 자연스럽게", "간결하고 자신 있게"];
-const initialDraft = { experience: "", keywords: "", situation: "", role: "", action: "", result: "", values: [] as string[], tone: "" };
-type Draft = typeof initialDraft;
+const values = valueOptions;
+type Tone = keyof typeof toneOptions;
 type Field = Exclude<keyof Draft, "values" | "tone">;
-type Errors = Partial<Record<keyof Draft, string>>;
+type Errors = DraftErrors;
 
-function validate(draft: Draft, step: number): Errors {
-  const errors: Errors = {};
-  const required: Field[] = step === 0 ? ["experience", "keywords"] : step === 1 ? ["situation", "role", "action", "result"] : [];
-  for (const field of required) if (!draft[field].trim()) errors[field] = "내용을 입력해 주세요.";
-  if (step === 2) {
-    if (!draft.values.length) errors.values = "나에게 중요한 가치를 하나 이상 골라 주세요.";
-    if (!draft.tone) errors.tone = "소개할 때 사용할 말투를 골라 주세요.";
-  }
-  return errors;
-}
-
-export default function ProfileWizard() {
+export default function ProfileWizard({ onSubmitDraft }: { onSubmitDraft?: (payload: WizardPayload) => void } = {}) {
   const [draft, setDraft] = useState<Draft>(initialDraft);
   const [step, setStep] = useState(0);
   const [review, setReview] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
+  const generation = useProfileStream();
   const heading = useRef<HTMLHeadingElement>(null);
   const errorSummary = useRef<HTMLDivElement>(null);
   const firstRender = useRef(true);
@@ -36,6 +26,7 @@ export default function ProfileWizard() {
   }, [step, review]);
 
   function moveTo(next: number) {
+    generation.cancel();
     setErrors({});
     setReview(false);
     setStep(next);
@@ -43,14 +34,21 @@ export default function ProfileWizard() {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const nextErrors = validate(draft, step);
+    const nextErrors = validateDraft(draft, step);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) {
       requestAnimationFrame(() => errorSummary.current?.focus());
       return;
     }
     if (step < 2) moveTo(step + 1);
-    else setReview(true);
+    else {
+      for (let index = 0; index < 3; index++) {
+        const allErrors = validateDraft(draft, index);
+        if (Object.keys(allErrors).length) { moveTo(index); setErrors(allErrors); return; }
+      }
+      onSubmitDraft?.(createWizardPayload(draft, null));
+      setReview(true);
+    }
   }
 
   function field(name: Field, label: string, hint: string, limit = 500, multiline = true) {
@@ -97,12 +95,36 @@ export default function ProfileWizard() {
       {[
         { title: steps[0], rows: [["경험", draft.experience], ["키워드", draft.keywords]] },
         { title: steps[1], rows: [["상황", draft.situation], ["역할과 목표", draft.role], ["내가 한 행동", draft.action], ["결과와 배운 점", draft.result]] },
-        { title: steps[2], rows: [["중요한 가치", draft.values.join(", ")], ["소개 톤", draft.tone]] },
+        { title: steps[2], rows: [["중요한 가치", draft.values.join(", ")], ["소개 톤", toneOptions[draft.tone as Tone]]] },
       ].map((group, index) => <section key={group.title} className="border-b border-stone-200 pb-6" aria-labelledby={`review-${index}`}>
         <div className="flex items-center justify-between"><h3 id={`review-${index}`} className="font-semibold">{group.title}</h3><button type="button" onClick={() => moveTo(index)} className={`${buttonClass} text-amber-900`} aria-label={`${group.title} 수정`}>수정</button></div>
         <dl className="mt-3 space-y-4">{group.rows.map(([label, content]) => <div key={label}><dt className="text-xs text-stone-500">{label}</dt><dd className="mt-1 whitespace-pre-wrap break-words text-sm leading-6">{content}</dd></div>)}</dl>
       </section>)}
-      <p role="status" className="rounded-xl bg-amber-50 p-4 text-sm leading-6 text-amber-950">입력 내용을 확인했어요. AI 프로필 생성과 계정 저장은 아직 연결 준비 중이에요.</p>
+      <section aria-labelledby="generated-profile-title" className="space-y-4 rounded-2xl border border-stone-200 bg-stone-50 p-4 sm:p-6">
+        <div>
+          <h3 id="generated-profile-title" className="font-semibold">AI 프로필 초안</h3>
+          <p role="status" aria-live="polite" className="mt-2 text-sm leading-6 text-stone-600">{generation.message || "입력 내용을 바탕으로 초안을 만들고 저장할 수 있어요."}</p>
+          <p className="mt-2 text-xs leading-5 text-stone-500">초안 생성을 누르면 입력 답변이 OpenAI API로 전송되고, 결과는 내 계정에 저장돼요.</p>
+        </div>
+        {(generation.profile.headline || generation.profile.competency_tags?.length || generation.profile.project_summary || generation.profile.object_guide) && <div className="space-y-4 rounded-xl bg-white p-4">
+          {generation.profile.headline && <div><p className="text-xs font-medium text-stone-500">한 줄 소개</p><p className="mt-1 break-words font-semibold">{generation.profile.headline}</p></div>}
+          {!!generation.profile.competency_tags?.length && <div><p className="text-xs font-medium text-stone-500">핵심 역량</p><ul className="mt-2 flex flex-wrap gap-2">{generation.profile.competency_tags.map((tag, index) => <li key={`${tag}-${index}`} className="rounded-full border border-stone-200 px-3 py-1 text-sm">{tag}</li>)}</ul></div>}
+          {generation.profile.project_summary && <div><p className="text-xs font-medium text-stone-500">프로젝트 요약</p><p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6">{generation.profile.project_summary}</p></div>}
+          {generation.profile.object_guide && Object.values(generation.profile.object_guide).some(Boolean) && <div><p className="text-xs font-medium text-stone-500">나의 별 조형 가이드</p><dl className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
+            {[ ["주조색", generation.profile.object_guide.primary_color], ["보조색", generation.profile.object_guide.secondary_color], ["배합", generation.profile.object_guide.color_ratio], ["형태 메타포", generation.profile.object_guide.shape_metaphor] ].filter((row) => row[1]).map(([label, value]) => <div key={label}><dt className="text-stone-500">{label}</dt><dd className="mt-1 break-words">{value}</dd></div>)}
+          </dl></div>}
+        </div>}
+        {(generation.status === "complete" || generation.status === "fallback") && <p className={`rounded-xl p-3 text-sm leading-6 ${generation.status === "fallback" ? "bg-amber-50 text-amber-950" : "bg-emerald-50 text-emerald-950"}`}>
+          {generation.status === "fallback" ? "AI 연결이 없거나 응답이 지연되어 기본 초안으로 저장했어요. AI 생성은 OPENAI_API_KEY 설정 후 사용할 수 있어요." : generation.saved ? "계정에 저장됨" : "저장 여부를 확인하지 못했어요."}
+        </p>}
+        {generation.status === "error" && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm leading-6 text-red-900">{generation.message}</p>}
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <button type="button" disabled={generation.status === "streaming"} onClick={() => void generation.generate(createWizardPayload(draft, null))} className={`${buttonClass} flex-1 bg-stone-900 text-white hover:bg-stone-700 disabled:cursor-wait disabled:opacity-60`}>
+            {generation.status === "streaming" ? "초안 만드는 중…" : generation.status === "complete" || generation.status === "fallback" || generation.status === "error" ? "다시 초안 만들기" : "AI 초안 만들기"}
+          </button>
+          {generation.status === "streaming" && <button type="button" onClick={generation.cancel} className={`${buttonClass} border border-stone-300`}>취소</button>}
+        </div>
+      </section>
       <button type="button" className={`${buttonClass} w-full border border-stone-300`} onClick={() => moveTo(2)}>입력 내용 계속 수정하기</button>
     </div> : <form onSubmit={submit} noValidate className="mt-7 space-y-7">
       {Object.values(errors).some(Boolean) && <div ref={errorSummary} tabIndex={-1} role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 outline-none">아래 표시된 항목을 확인한 뒤 다시 진행해 주세요.</div>}
@@ -114,8 +136,8 @@ export default function ProfileWizard() {
         <p className="rounded-xl bg-stone-50 px-4 py-3 text-sm leading-6"><span className="text-stone-500">이야기의 출발점</span><br />{draft.experience}</p>
         {field("situation", "어떤 상황이었나요?", "무엇을 하던 중이었고, 어떤 어려움이 있었는지 적어 주세요.")}
         {field("role", "나의 역할과 목표는 무엇이었나요?", "맡은 일과 이루고 싶었던 목표를 알려 주세요.")}
-        {field("action", "문제를 풀기 위해 무엇을 했나요?", "팀 전체가 한 일보다 내가 직접 시도한 행동을 적어 주세요.")}
-        {field("result", "무엇이 달라졌고, 무엇을 배웠나요?", "숫자로 된 성과가 없어도 괜찮아요. 변화나 배운 점을 적어 주세요.")}
+        {field("action", "문제를 풀기 위해 무엇을 했나요?", "내가 직접 시도한 행동을 20자 이상 적어 주세요.")}
+        {field("result", "무엇이 달라졌고, 무엇을 배웠나요?", "숫자 성과가 없어도 괜찮아요. 변화나 배운 점을 10자 이상 적어 주세요.")}
       </>}
       {step === 2 && <>
         <fieldset aria-describedby={`values-hint${errors.values ? " values-error" : ""}`}>
@@ -130,8 +152,8 @@ export default function ProfileWizard() {
         </fieldset>
         <fieldset aria-describedby={errors.tone ? "tone-error" : undefined}>
           <legend className="text-sm font-semibold">어떤 말투로 나를 소개할까요? (필수)</legend>
-          <div className="mt-4 space-y-3">{tones.map(tone => <label key={tone} className="flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border border-stone-300 px-4 text-sm has-checked:border-amber-800 has-checked:bg-amber-50 has-focus-visible:outline-2 has-focus-visible:outline-amber-700">
-            <input type="radio" name="tone" value={tone} checked={draft.tone === tone} className="size-4 accent-amber-800" onChange={() => { setDraft(previous => ({ ...previous, tone })); setErrors(previous => ({ ...previous, tone: undefined })); }} />{tone}
+          <div className="mt-4 space-y-3">{Object.entries(toneOptions).map(([tone, label]) => <label key={tone} className="flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border border-stone-300 px-4 text-sm has-checked:border-amber-800 has-checked:bg-amber-50 has-focus-visible:outline-2 has-focus-visible:outline-amber-700">
+            <input type="radio" name="tone" value={tone} checked={draft.tone === tone} className="size-4 accent-amber-800" onChange={() => { setDraft(previous => ({ ...previous, tone })); setErrors(previous => ({ ...previous, tone: undefined })); }} />{label}
           </label>)}</div>
           {errors.tone && <p id="tone-error" className="mt-2 text-sm text-red-700">{errors.tone}</p>}
         </fieldset>
