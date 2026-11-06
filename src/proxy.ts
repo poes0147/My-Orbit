@@ -8,13 +8,7 @@ export async function proxy(request: NextRequest) {
     if (error || !user) {
       const login = new URL("/login", request.url);
       login.searchParams.set("next", request.nextUrl.pathname + request.nextUrl.search);
-      return respond(NextResponse.redirect(login));
-    }
-    if (request.nextUrl.pathname.startsWith("/builder")) {
-      const { data: workshopSessionId, error: contextError } = await supabase.rpc("current_workshop_session_id");
-      if (contextError || !workshopSessionId) {
-        return respond(NextResponse.redirect(new URL("/session", request.url)));
-      }
+      return respond(NextResponse.redirect(login, request.nextUrl.pathname === "/builder/preview" ? 302 : 307));
     }
     if (request.nextUrl.pathname.startsWith("/instructor") || request.nextUrl.pathname.startsWith("/admin")) {
       const { data: profile, error: roleError } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle();

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createRequestClient } from "@/lib/supabase/request-client";
 import { editableTextSchema } from "@/lib/builder/editable-draft";
-import { profileGenerationSchema } from "@/lib/builder/profile-generation";
+import { readSavedDraft } from "@/lib/builder/read-saved-draft";
 
 const patchSchema = z.object({ id: z.string().uuid(), updatedAt: z.string().datetime({ offset: true }), current: editableTextSchema }).strict();
 const workshopSchema = z.string().uuid().nullable();
@@ -14,17 +14,9 @@ export async function GET(request: NextRequest) {
   if (authError || !user) return json({ success: false, message: "로그인이 필요해요." }, 401);
   const scope = workshopSchema.safeParse(request.nextUrl.searchParams.get("workshopSessionId"));
   if (!scope.success) return json({ success: false, message: "워크숍 주소를 확인해 주세요." }, 400);
-  let query = supabase.from("ai_interview_sessions").select("id,answers,updated_at").eq("user_id", user.id).eq("status", "completed");
-  query = scope.data ? query.eq("workshop_session_id", scope.data) : query.is("workshop_session_id", null);
-  const { data, error } = await query.order("created_at", { ascending: false }).limit(1).maybeSingle();
-  if (error) return json({ success: false, message: "저장된 초안을 불러오지 못했어요." }, 503);
-  if (!data) return json({ success: true, draft: null });
-  const original = editableTextSchema.safeParse(data.answers?.generated_draft);
-  if (!original.success) return json({ success: false, message: "저장된 초안 형식을 확인하지 못했어요. 새 초안을 만들어 주세요." }, 422);
-  const current = editableTextSchema.safeParse(data.answers?.edited_draft ?? data.answers?.generated_draft);
-  if (!current.success) return json({ success: false, message: "수정본을 읽지 못했어요. 다시 시도해 주세요." }, 422);
-  const guide = profileGenerationSchema.shape.object_guide.safeParse(data.answers?.generated_draft?.object_guide);
-  return json({ success: true, draft: { id: data.id, updatedAt: data.updated_at, original: original.data, current: current.data, ...(guide.success ? { objectGuide: guide.data } : {}) } });
+  const result = await readSavedDraft(supabase, user.id, scope.data);
+  if (result.status !== 200) return json({ success: false, message: result.message }, result.status);
+  return json({ success: true, draft: result.draft });
 }
 
 export async function PATCH(request: NextRequest) {

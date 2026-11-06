@@ -109,11 +109,15 @@ function DraftEditor({ draft, onEditingChange }: { draft: SavedDraft; onEditingC
     </div>
     {draft.objectGuide && <details className="rounded-xl border border-stone-200 bg-white px-4"><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">나의 별 조형 가이드 보기</summary><dl className="grid gap-4 pb-4 text-sm sm:grid-cols-2">{[["주조색", draft.objectGuide.primary_color], ["보조색", draft.objectGuide.secondary_color], ["배합", draft.objectGuide.color_ratio], ["형태 메타포", draft.objectGuide.shape_metaphor]].map(([label, value]) => <div key={label}><dt className="text-stone-500">{label}</dt><dd className="mt-1 break-words">{value}</dd></div>)}</dl></details>}
     <div className="flex flex-wrap items-center gap-3"><button type="button" disabled={blocked || !dirty} className={`${button} bg-stone-900 text-white`} onClick={() => void save()}>{busy ? "저장 중…" : "수정한 초안 저장"}</button><p className="text-sm text-stone-600">{dirty ? "저장하지 않은 수정 내용이 있어요." : "계정에 저장된 초안이에요."}</p></div>
+    {dirty || blocked ? <p className="text-sm text-stone-600">편집을 마치고 저장하면 미리볼 수 있어요.</p> :
+      <form action="/builder/preview" method="get"><button type="submit" className={button}>미리보기</button></form>}
     {message && <p role={failed ? "alert" : "status"} className={failed ? "text-sm text-red-800" : "text-sm text-stone-700"}>{message}</p>}
   </div>;
 }
 
-export default function SavedDraftEditor({ workshopSessionId, revision, locked, onEditingChange }: { workshopSessionId: string | null; revision: number; locked: boolean; onEditingChange: (value: boolean) => void }) {
+const ignoreEditingChange = () => {};
+
+export default function SavedDraftEditor({ workshopSessionId, revision, locked, onEditingChange = ignoreEditingChange }: { workshopSessionId: string | null; revision: number; locked: boolean; onEditingChange?: (value: boolean) => void }) {
   const [draft, setDraft] = useState<SavedDraft | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
