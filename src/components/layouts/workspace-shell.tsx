@@ -46,4 +46,3 @@ export default function WorkspaceShell({ context, children }: { context: Workspa
     </div>
   </div></Context.Provider>;
 }
-
