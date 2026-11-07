@@ -1,7 +1,10 @@
 import "server-only";
 
 import { NextRequest, NextResponse } from "next/server";
+import { readAvailableClay } from "@/lib/builder/clay-catalog";
+import { clayRoles, resolveClayColors, type AvailableClay } from "@/lib/builder/clay-recommendation";
 import { createRequestClient } from "@/lib/supabase/request-client";
+import { getProfileAiConfig } from "@/lib/builder/openai-config";
 import {
   buildProfilePrompt,
   createFallbackProfile,
@@ -39,15 +42,56 @@ function sse(event: string, data: unknown) {
   return encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 }
 
-type ProviderResult = { profile: GeneratedProfile; fallbackReason?: string };
+type ProviderResult = { profile: GeneratedProfile; fallbackReason?: string; selections?: unknown };
+
+function attachClayColors(profile: GeneratedProfile, selections: unknown, catalog: AvailableClay[]) {
+  const colors = resolveClayColors(selections, catalog);
+  profile.object_guide = {
+    ...profile.object_guide,
+    colors,
+    primary_color: colors[0]?.name ?? "등록 재료 없음",
+    secondary_color: colors[1]?.name ?? "선택 없음",
+    color_ratio: colors.length === 2 ? colors.map(color => color.usage_ratio).join(":") : "색상별 비율 참고",
+  };
+  return profile;
+}
 
 async function streamOpenAi(
   input: InterviewRequest,
+  catalog: AvailableClay[],
   signal: AbortSignal,
   sendToken: (delta: string) => void,
 ): Promise<ProviderResult> {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const { apiKey, model, reasoning } = getProfileAiConfig();
   if (!apiKey) return { profile: createFallbackProfile(input), fallbackReason: "PROVIDER_NOT_CONFIGURED" };
+  const { shape_name, shape_metaphor, shaping_steps } = profileGenerationJsonSchema.properties.object_guide.properties;
+  const outputSchema = {
+    ...profileGenerationJsonSchema,
+    properties: {
+      ...profileGenerationJsonSchema.properties,
+      object_guide: {
+        type: "object", additionalProperties: false,
+        required: ["shape_name", "shape_metaphor", "shaping_steps", "color_selections"],
+        properties: {
+          shape_name, shape_metaphor, shaping_steps,
+          color_selections: {
+            type: "array",
+            items: {
+              type: "object", additionalProperties: false,
+              required: ["id", "role", "usage_ratio", "placement", "recommendation_reason"],
+              properties: {
+                id: { type: "string", ...(catalog.length ? { enum: catalog.map(color => color.id) } : {}) },
+                role: { type: "string", enum: clayRoles },
+                usage_ratio: { type: "integer", minimum: 1, maximum: 100 },
+                placement: { type: "string" },
+                recommendation_reason: { type: "string" },
+              },
+            },
+          },
+        },
+      },
+    },
+  };
 
   let lastFailure = "LLM_UNAVAILABLE";
   let streamed = false;
@@ -58,17 +102,20 @@ async function streamOpenAi(
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+          model,
+          // Short profile extraction needs the output budget for visible JSON,
+          // rather than reasoning tokens. Keep older model overrides compatible.
+          ...(reasoning ? { reasoning } : {}),
           instructions: "Return only the requested structured profile. Never invent facts, metrics, credentials, or achievements.",
-          input: buildProfilePrompt(input),
-          max_output_tokens: 900,
+          input: `${buildProfilePrompt(input)}\n클레이 후보 목록: ${JSON.stringify(catalog.map(({ id, name, hex }) => ({ id, name, hex })))}\n색상은 목록의 ID만 사용하세요. 후보가 없으면 빈 배열, 후보가 여럿이면 이야기와 어울리는 여러 색을 기본으로 고르세요. 각 색이 쓰이는 위치, 역할, 비율, 경험과 연결된 이유를 적고 전체 사용 비율 합은 100으로 하세요. 혼합 레시피는 작성하지 마세요.`,
+          max_output_tokens: 1600,
           stream: true,
           text: {
             format: {
               type: "json_schema",
               name: "profile_generation_schema",
               strict: true,
-              schema: profileGenerationJsonSchema,
+              schema: outputSchema,
             },
           },
         }),
@@ -108,8 +155,13 @@ async function streamOpenAi(
       }
 
       if (signal.aborted) throw new Error("LLM_TIMEOUT");
-      const parsed = profileGenerationSchema.safeParse(JSON.parse(raw));
-      if (parsed.success) return { profile: parsed.data };
+      const decoded = JSON.parse(raw);
+      const guide = decoded?.object_guide;
+      const parsed = profileGenerationSchema.safeParse({
+        ...decoded,
+        object_guide: { ...guide, primary_color: "목록에서 선택", secondary_color: "목록에서 선택", color_ratio: "색상별 비율 참고" },
+      });
+      if (parsed.success) return { profile: parsed.data, selections: guide?.color_selections };
       lastFailure = "LLM_INVALID_OUTPUT";
       break;
     } catch (error) {
@@ -159,6 +211,7 @@ export async function POST(request: NextRequest) {
       : null;
     if (error || activeSessionId !== input.workshopSessionId) return reject("WORKSHOP_ACCESS_DENIED", "현재 참여 중인 워크숍을 확인할 수 없어요. 코드를 다시 확인해 주세요.", 403);
   }
+  const catalog = await readAvailableClay(supabase).catch(() => []);
 
   const abortController = new AbortController();
   let cancelled = false;
@@ -182,11 +235,15 @@ export async function POST(request: NextRequest) {
       void (async () => {
         try {
           send("token", { type: "status", message: "내 이야기를 바탕으로 프로필 초안을 만들고 있어요." });
-          const result = await streamOpenAi(input, abortController.signal, (delta) => {
+          const result = await streamOpenAi(input, catalog, abortController.signal, (delta) => {
             send("token", { type: "partial", delta });
           });
           if (timeout) clearTimeout(timeout);
           timeout = undefined;
+          if (cancelled) return;
+          const latestCatalog = await readAvailableClay(supabase).catch(() => []);
+          attachClayColors(result.profile, result.selections, latestCatalog);
+          if (input.projectCard) result.profile.project_card = input.projectCard;
           if (result.fallbackReason) {
             send("token", { type: "reset" });
             const fallbackJson = JSON.stringify(result.profile);
@@ -225,7 +282,8 @@ export async function POST(request: NextRequest) {
         } catch {
           if (cancelled) return;
           const reason = abortController.signal.aborted ? "LLM_TIMEOUT" : "GENERATION_FAILED";
-          const fallbackProfile = createFallbackProfile(input);
+          const fallbackProfile = attachClayColors(createFallbackProfile(input), undefined, await readAvailableClay(supabase).catch(() => []));
+          if (input.projectCard) fallbackProfile.project_card = input.projectCard;
           let saveFailed = false;
           try {
             const { error: saveError } = await supabase.from("ai_interview_sessions").insert({

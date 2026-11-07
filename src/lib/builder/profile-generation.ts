@@ -1,6 +1,9 @@
 import { z } from "zod";
+import { projectCardSchema } from "./project-card";
+import { recommendedClaySchema } from "./clay-recommendation";
 
 export const interviewRequestSchema = z.object({
+  projectCard: projectCardSchema.optional(),
   workshopSessionId: z.string().uuid().nullable(),
   stepData: z.object({
     keywords: z.array(z.string().trim().min(1).max(40)).min(1).max(5),
@@ -20,15 +23,25 @@ export const interviewRequestSchema = z.object({
 
 export type InterviewRequest = z.infer<typeof interviewRequestSchema>;
 
+export const defaultShapingSteps = [
+  "점토를 둥글게 빚어 행성의 몸체를 만들어요.",
+  "가이드의 형태를 참고해 띠나 표면 무늬를 배치해요.",
+  "오브제 제작 체크리스트를 확인하고 모서리와 표면을 다듬어요.",
+];
+
 export const profileGenerationSchema = z.object({
   headline: z.string().trim().min(1).max(60),
   competency_tags: z.array(z.string().trim().min(1).max(20)).length(3),
+  project_card: projectCardSchema.optional(),
   project_summary: z.string().trim().min(1).max(300),
   object_guide: z.object({
     primary_color: z.string().trim().min(1).max(80),
     secondary_color: z.string().trim().min(1).max(80),
     color_ratio: z.string().trim().min(1).max(20),
     shape_metaphor: z.string().trim().min(1).max(300),
+    shape_name: z.string().trim().min(1).max(60).optional().catch(undefined),
+    shaping_steps: z.array(z.string().trim().min(1).max(120)).length(3).optional().catch(undefined),
+    colors: z.array(recommendedClaySchema).optional().catch([]),
   }),
 });
 
@@ -55,8 +68,10 @@ export const profileGenerationJsonSchema = {
         secondary_color: { type: "string" },
         color_ratio: { type: "string" },
         shape_metaphor: { type: "string" },
+        shape_name: { type: "string", description: "추천 행성의 형태 이름, 60자 이하" },
+        shaping_steps: { type: "array", items: { type: "string", description: "초보자가 할 수 있는 성형 행동, 120자 이하" }, minItems: 3, maxItems: 3 },
       },
-      required: ["primary_color", "secondary_color", "color_ratio", "shape_metaphor"],
+      required: ["primary_color", "secondary_color", "color_ratio", "shape_metaphor", "shape_name", "shaping_steps"],
       additionalProperties: false,
     },
   },
@@ -98,6 +113,8 @@ export function createFallbackProfile(input: InterviewRequest): GeneratedProfile
       secondary_color: secondary,
       color_ratio: "70:30",
       shape_metaphor: `${toneDescriptions[input.stepData.persona.tone]} 분위기를 담은 별 모티프. 핵심 경험을 돋보이게 하는 단순한 형태로 만들어 보세요.`,
+      shape_name: "나의 궤도 행성",
+      shaping_steps: defaultShapingSteps,
     },
   });
 }
@@ -115,7 +132,7 @@ export function buildProfilePrompt(input: InterviewRequest) {
     `상황/문제: ${input.stepData.project.problem}`,
     `행동: ${input.stepData.project.action}`,
     `결과/배움: ${input.stepData.project.outcome}`,
-    "역량 키워드는 입력에 드러난 강점을 세 개로 정리하고, 조형 가이드는 색 배합비와 메타포를 짧고 실행 가능하게 작성하세요.",
+    "역량 키워드는 입력에 드러난 강점을 세 개로 정리하세요. 조형 가이드에는 경험을 상징하는 행성 형태 이름, 그 의미, 색 배합비, 초보자가 실행할 성형 순서 3단계를 짧게 작성하세요. 하드웨어 조립이나 가열 방법은 제안하지 마세요.",
   ].join("\n");
 }
 
@@ -135,7 +152,7 @@ export function readPartialProfile(raw: string): PartialGeneratedProfile {
     }
   };
   const objectGuide: Partial<GeneratedProfile["object_guide"]> = {};
-  for (const key of ["primary_color", "secondary_color", "color_ratio", "shape_metaphor"] as const) {
+  for (const key of ["primary_color", "secondary_color", "color_ratio", "shape_metaphor", "shape_name"] as const) {
     const value = readString(key);
     if (value !== undefined) objectGuide[key] = value;
   }

@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import type { ClipboardEvent, FormEvent, KeyboardEvent } from "react";
+import { useState } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 type SessionDetails = {
@@ -19,12 +19,10 @@ type ApiResult = {
 
 export default function SessionCodeForm() {
   const router = useRouter();
-  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
-  const [characters, setCharacters] = useState<string[]>(["", "", "", "", "", ""]);
+  const [code, setCode] = useState("");
   const [verifiedSession, setVerifiedSession] = useState<SessionDetails | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const code = characters.join("");
   const validCode = /^[A-Z0-9]{6}$/.test(code);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -61,53 +59,19 @@ export default function SessionCodeForm() {
     }
   }
 
-  function changeCode(index: number, value: string) {
-    const nextCharacter = value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(-1);
-    const nextCharacters = [...characters];
-    nextCharacters[index] = nextCharacter;
-    setCharacters(nextCharacters);
+  function changeCode(event: ChangeEvent<HTMLInputElement>) {
+    const value = event.target.value;
+    setCode(value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6));
     setVerifiedSession(null);
-    setMessage(value && !/^[A-Z0-9]$/i.test(value) ? "영문과 숫자만 입력할 수 있어요." : "");
-    if (nextCharacter && index < 5) inputRefs.current[index + 1]?.focus();
+    setMessage(/[^A-Z0-9]/i.test(value) ? "영문과 숫자만 입력할 수 있어요." : "");
   }
 
-  function pasteCode(event: ClipboardEvent<HTMLInputElement>) {
-    event.preventDefault();
-    const pasted = event.clipboardData.getData("text").toUpperCase();
-    const nextCharacters = pasted.replace(/[^A-Z0-9]/g, "").slice(0, 6).split("");
-    while (nextCharacters.length < 6) nextCharacters.push("");
-    setCharacters(nextCharacters);
-    setVerifiedSession(null);
-    setMessage(/[^A-Z0-9\s-]/.test(pasted) ? "영문과 숫자만 입력할 수 있어요." : "");
-    inputRefs.current[Math.min(nextCharacters.filter(Boolean).length, 5)]?.focus();
-  }
-
-  function moveFocus(event: KeyboardEvent<HTMLInputElement>, index: number) {
-    if (event.key === "Backspace") {
-      event.preventDefault();
-      if (characters[index]) {
-        const nextCharacters = [...characters];
-        nextCharacters[index] = "";
-        setCharacters(nextCharacters);
-        setVerifiedSession(null);
-        setMessage("");
-      }
-      if (index > 0) inputRefs.current[index - 1]?.focus();
-    } else if (event.key === "ArrowLeft" && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    } else if (event.key === "ArrowRight" && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  }
-
-  return <form onSubmit={submit} className="mt-8 space-y-4">
+  return <form onSubmit={submit} className="mt-6 space-y-3 sm:mt-8 sm:space-y-4">
     <fieldset>
-      <legend className="mb-3 block text-sm font-medium text-stone-800">참여 코드</legend>
-      <div className="flex gap-2">
-      {Array.from({ length: 6 }, (_, index) => <input
-        key={index}
-        ref={element => { inputRefs.current[index] = element; }}
-        id={index === 0 ? "session-code" : undefined}
+      <legend className="mb-2 block text-sm font-medium text-stone-800 sm:mb-3">참여 코드</legend>
+      <div className="w-full">
+      <input
+        id="session-code"
         type="text"
         inputMode="text"
         autoComplete="off"
@@ -115,21 +79,20 @@ export default function SessionCodeForm() {
         autoCorrect="off"
         spellCheck={false}
         required
-        maxLength={1}
-        pattern="[A-Za-z0-9]"
-        value={characters[index]}
+        maxLength={6}
+        pattern="[A-Za-z0-9]{6}"
+        value={code}
         disabled={busy}
-        onChange={event => changeCode(index, event.target.value)}
-        onPaste={pasteCode}
-        onKeyDown={event => moveFocus(event, index)}
-        aria-label={`참여 코드 ${index + 1}번째 문자`}
+        onChange={changeCode}
+        aria-label="6자리 참여 코드"
         aria-describedby="session-code-hint"
         aria-invalid={Boolean(message)}
-        className="h-14 min-w-0 flex-1 rounded-xl border border-stone-300 text-center text-lg font-semibold uppercase outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
-      />)}
+        className="h-13 w-full rounded-xl border border-stone-300 px-4 text-center font-mono text-xl font-semibold uppercase tracking-[0.35em] outline-none transition placeholder:font-sans placeholder:text-sm placeholder:font-normal placeholder:tracking-normal focus:border-amber-500 focus:ring-4 focus:ring-amber-100 sm:h-14"
+        placeholder="예: A1B2C3"
+      />
       </div>
     </fieldset>
-    <p id="session-code-hint" className="text-xs text-stone-500">영문과 숫자 6자리를 입력해 주세요. 소문자는 자동으로 대문자로 바뀌며, 코드를 붙여넣을 수도 있어요.</p>
+    <p id="session-code-hint" className="text-xs text-stone-500">영문과 숫자 6자리를 한 번에 입력하거나 붙여넣어 주세요. 소문자는 자동으로 대문자로 바뀝니다.</p>
     {message && <p id="session-code-error" role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">{message}</p>}
 
     {verifiedSession && <section aria-live="polite" className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
@@ -141,7 +104,7 @@ export default function SessionCodeForm() {
     <button
       type="submit"
       disabled={!validCode || busy}
-      className="h-14 w-full rounded-2xl bg-stone-900 font-semibold text-white transition hover:bg-stone-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 disabled:cursor-not-allowed disabled:bg-stone-300"
+      className="h-13 w-full rounded-xl bg-stone-900 text-sm font-semibold text-white transition enabled:hover:bg-stone-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 disabled:cursor-not-allowed disabled:bg-stone-300 sm:h-14 sm:rounded-2xl sm:text-base"
     >
       {busy ? "확인 중…" : verifiedSession ? "이 워크숍에 참여하기" : "참여 코드 확인"}
     </button>

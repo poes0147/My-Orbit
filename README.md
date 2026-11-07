@@ -4,7 +4,7 @@
 
 ## 기술 스택
 
-Next.js App Router · React · TypeScript · Tailwind CSS · Supabase(PostgreSQL·Auth·Storage, 연결 예정) · Vercel(배포 예정)
+Next.js App Router · React · TypeScript · Tailwind CSS · Supabase(PostgreSQL·Auth 연결, Storage 후속) · Vercel
 
 ## 개발 시작
 
@@ -26,7 +26,9 @@ npm run dev
 
 ## 현재 상태
 
-로그인·대시보드 화면과 수동 3단계 프로필 입력 UI가 있습니다. Google 로그인 진입·콜백·서버 세션 확인·로그아웃을 연결했으며 실제 계정 로그인 후 전체 흐름 확인은 남아 있습니다. 대시보드와 입력 폼의 계정별 DB 저장은 미연결입니다. 공개 프로필, NFC 태그 연결, AI 생성, 강사 기능도 아직 완료되지 않았습니다.
+Google/Kakao 로그인, 회원 DB 및 워크숍 참여 연결이 있습니다. 2026-11-03 로컬 보정에서 관리자 전용 코드 발급·전체 관리, PC 사이드바·모바일 탭, 실제 워크숍 헤더, 위저드 임시 저장 복원을 구현했습니다. 입력 초안은 계정·워크숍별로 이 탭의 sessionStorage에 저장하며 로그아웃 시 제거합니다. 비공개 AI 초안 생성·저장·수정 및 이력서 분석 기반 입력 자동 채우기는 로컬과 개발 DB에서 연결을 확인했습니다. 이력서 기능의 배포·권한 검증 잔여 항목은 아래 전용 문서를 참고하세요.
+
+실제 로그인 계정으로 로컬 관리자 발급 → 코드 확인 → 빌더 진입 → 입력 새로고침 복원 → 세션 종료 → 재입장 차단을 검증했습니다. 대시보드의 실제 프로필 발행·NFC·조회수 집계는 해당 테이블과 기능이 없어 진행 중입니다. 상세 결과와 미완료 항목은 [스택 재점검 기록](./docs/reviews/2026-11-03-stack-audit.md)을 참고하세요. 이번 변경은 별도 작업 폴더 `D:\modu\my-orbit-workshop`의 미커밋 상태이며 Vercel에는 아직 반영되지 않았습니다.
 
 Supabase Google·Kakao 제공자와 웹 로그인 버튼을 활성화했습니다. Google 로그인·로그아웃·재로그인과 Kakao 로그인·로그아웃은 사용자 확인을 받았고, 실제 DB 회원 등록도 확인했습니다. Kakao 재로그인과 장시간 세션 유지·갱신 검증은 남아 있습니다. 로그인은 서버 PKCE와 HttpOnly 쿠키로 처리하고 보호된 화면은 Next.js Proxy에서 사용자 신원을 확인합니다. 회원용 `public.users` 생성·자동 등록·기존 회원 보충·RLS를 개발 DB에 적용하고 실제 Postgres에서 권한 격리를 검증했습니다. 웹 배포 연결은 별도 작업입니다. 완료된 기능은 실제 동작과 인수 조건을 확인한 뒤에만 완료로 표시합니다.
 
@@ -41,7 +43,8 @@ Supabase Google·Kakao 제공자와 웹 로그인 버튼을 활성화했습니�
 | `/settings` | 계정 설정 |
 | `/p/{user_slug}` | 외부 방문자용 공개 프로필 |
 | `/t/{tag_id}` | NFC 태그 진입·프로필 연결 |
-| `/instructor` | 강사용 운영 화면 |
+| `/admin/workshops` | 관리자 전용 코드 발급·전체 조회·참여 종료 |
+| `/admin/sessions` | 관리자 화면 별칭 |
 
 위 경로 중 일부는 현재 화면 골격만 있습니다. 실제 라우트와 기능 상태는 코드를 기준으로 확인하세요.
 
@@ -62,6 +65,12 @@ Supabase Google·Kakao 제공자와 웹 로그인 버튼을 활성화했습니�
 
 ## 문서
 
+- [`이력서 분석·입력 자동 채우기`](./docs/plans/resume-analysis.md): PDF 4MB·텍스트 분석, 검토·적용 및 확인/미확인 요약
+
+- [`프로필 초안 편집·저장·재조회`](./docs/plans/profile-draft-editing.md): 직접 수정, AI 부분 재작성 및 최신 확인 기록
+- [`OpenAI 연결`](./docs/setup/openai.md): Luna 환경변수 및 실제 생성 검증
 - [`AGENTS.md`](./AGENTS.md): Codex가 작업 전에 읽는 저장소 지침과 개발 합의
 - ign8t: 승인된 제품 마스터 스펙, 작업 목록 및 기능별 작업 스펙
 - [`3단계 입력 폼 구현 준비`](./docs/plans/profile-wizard.md): 다음 작업의 확정 범위와 스펙 보완 항목
+- [`관리자 워크숍 코드 발급`](./docs/plans/admin-workshops.md): 최신 권한·DB 적용·검증 결과
+- [`스택 재점검 기록`](./docs/reviews/2026-11-03-stack-audit.md): 리셋된 스펙 대비 수정 및 남은 항목
