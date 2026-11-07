@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import NfcTagManager from "@/components/dashboard/nfc-tag-manager";
 import { getDashboardSummary } from "@/lib/dashboard/get-dashboard-summary";
 
 export default async function DashboardPage() {
@@ -19,7 +21,7 @@ export default async function DashboardPage() {
   const journey = [
     { title: "경험을 정리해요", detail: summary.interviewUnavailable ? "인터뷰 기록을 불러오지 못했어요." : summary.interview ? "저장된 인터뷰 기록의 상태예요." : "인터뷰 응답의 저장 기능은 아직 연결되지 않았어요.", status: interviewStatus },
     { title: "프로필을 다듬어요", detail: summary.profileUnavailable ? "프로필을 불러오지 못했어요. 잠시 후 다시 확인해 주세요." : profile ? profile.headline || "한 줄 소개를 작성해 주세요." : "프로필을 만들면 이곳에서 발행 상태를 확인할 수 있어요.", status: profileStatus },
-    { title: "나의 별을 연결해요", detail: "NFC 태그 연결 데이터는 아직 준비 중이에요.", status: "준비 중" },
+    { title: "나의 별을 연결해요", detail: "연결한 오브제와 연결 대상을 아래에서 확인할 수 있어요.", status: "오브제" },
   ];
 
   return (
@@ -75,12 +77,7 @@ export default async function DashboardPage() {
             </div>
             <span className="shrink-0 text-sm font-semibold text-stone-700">{profileStatus}</span>
           </div>
-          <div className="flex items-center justify-between gap-4 py-4">
-            <div><p className="text-sm font-medium">NFC 오브제</p><p className="mt-1 text-xs text-stone-500">태그와 프로필 연결 상태</p></div>
-            <span className="text-sm font-semibold text-stone-500">연결 전</span>
-          </div>
         </div>
-        <p className="mt-3 text-xs leading-5 text-stone-500">조회수와 NFC 자료는 저장 기능이 연결된 뒤 표시돼요.</p>
       </section>
 
       <section aria-labelledby="journey-title">
@@ -112,11 +109,17 @@ export default async function DashboardPage() {
           <Link href={nextHref} className="min-h-20 rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-950 transition-colors hover:bg-amber-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">
             <span aria-hidden="true" className="block text-lg">✦</span>{profile ? "프로필 편집" : hasWorkshop ? "프로필 작성" : "참여 코드 입력"}
           </Link>
-          <div className="min-h-20 rounded-2xl border border-stone-200 p-4 text-sm font-semibold text-stone-500" aria-label="NFC 태그 연결 기능 준비 중">
-            <span aria-hidden="true" className="block text-lg text-stone-400">◈</span>NFC 태그 연결
-            <span className="mt-1 block text-xs font-normal">기능 연결 준비 중</span>
-          </div>
+          <a href="#nfc-tags" className="min-h-20 rounded-2xl border border-stone-200 p-4 text-sm font-semibold hover:bg-stone-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">
+            <span aria-hidden="true" className="block text-lg">◈</span>내 NFC 오브제
+          </a>
         </div>
+      </section>
+      <section id="nfc-tags" className="min-w-0 scroll-mt-24 xl:col-span-2" aria-labelledby="nfc-tags-title">
+        <h2 id="nfc-tags-title" className="text-lg font-semibold">내 NFC 오브제</h2>
+        <p className="mt-1 text-sm leading-6 text-stone-600">태그와 QR로 열리는 페이지를 바꿀 수 있어요.</p>
+        <Suspense fallback={<p role="status" className="mt-3 rounded-2xl border border-stone-200 bg-stone-50 p-4 text-sm">등록된 오브제를 불러오고 있어요.</p>}>
+          <NfcTagManager profilePublished={Boolean(profile?.is_published)} />
+        </Suspense>
       </section>
     </section>
   );

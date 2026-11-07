@@ -16,17 +16,24 @@ h1{font-size:1.6rem;line-height:1.3}small{color:#92400e;font-weight:600}</style>
   });
 }
 
-export async function GET(_request: Request, { params }: { params: Promise<{ tag_id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ tag_id: string }> }) {
   const parsed = tagIdSchema.safeParse((await params).tag_id);
   if (!parsed.success) return notice("유효하지 않은 태그예요", "오브제에 적힌 QR 주소를 확인해 주세요.", 404);
+  const redirectTo = (location: string, status = 302) => new Response(null, { status, headers: { ...noStore, Location: location } });
+  const unavailable = "/t/" + parsed.data + "/unavailable";
   try {
     const tag = await resolveTag(parsed.data);
-    if (!tag) return notice("등록되지 않은 태그예요", "오브제에 적힌 QR 주소를 확인해 주세요.", 404);
+    if (!tag) return redirectTo(unavailable + "?reason=invalid");
     switch (tag.tag_status) {
-      case "published": return new Response(null, { status: 302, headers: { ...noStore, Location: "/p/" + tag.public_slug } });
-      case "unbound": return new Response(null, { status: 307, headers: { ...noStore, Location: tagBindingPath(parsed.data) } });
-      case "inactive": return notice("연결이 중단됐어요", "현재 사용할 수 없는 오브제 태그예요.");
-      case "unavailable": return notice("공개 프로필을 볼 수 없어요", "오브제 소유자가 프로필을 공개하면 이 링크에서 볼 수 있어요.");
+      case "published": return redirectTo("/p/" + tag.public_slug);
+      case "external": {
+        const url = new URL(tag.external_url);
+        if (url.origin === new URL(request.url).origin && url.pathname.startsWith("/t/")) return redirectTo(unavailable + "?reason=invalid");
+        return redirectTo(url.href);
+      }
+      case "unbound": return redirectTo(tagBindingPath(parsed.data), 307);
+      case "inactive": return redirectTo(unavailable + "?reason=invalid");
+      case "unavailable": return redirectTo(unavailable + "?reason=private");
     }
   } catch (error) {
     console.error("NFC route resolution failed", error instanceof Error ? error.name : "unknown");

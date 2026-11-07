@@ -165,26 +165,35 @@ export type Database = {
         Row: {
           claim_code_hash: string | null
           created_at: string
+          custom_url: string | null
           is_active: boolean
           mapped_at: string | null
           profile_id: string | null
           tag_id: string
+          target_type: Database["public"]["Enums"]["nfc_target_type"]
+          updated_at: string
         }
         Insert: {
           claim_code_hash?: string | null
           created_at?: string
+          custom_url?: string | null
           is_active?: boolean
           mapped_at?: string | null
           profile_id?: string | null
           tag_id: string
+          target_type?: Database["public"]["Enums"]["nfc_target_type"]
+          updated_at?: string
         }
         Update: {
           claim_code_hash?: string | null
           created_at?: string
+          custom_url?: string | null
           is_active?: boolean
           mapped_at?: string | null
           profile_id?: string | null
           tag_id?: string
+          target_type?: Database["public"]["Enums"]["nfc_target_type"]
+          updated_at?: string
         }
         Relationships: [
           {
@@ -497,7 +506,7 @@ export type Database = {
       profile_owner_status: { Args: { p_profile_id: string }; Returns: string }
         resolve_nfc_tag: {
           Args: { p_tag_id: string }
-          Returns: { tag_status: string; public_slug: string | null }[]
+          Returns: { tag_status: string; public_slug: string | null; external_url: string | null }[]
         }
       save_clay_recipe: {
         Args: { p_id: string; p_items: Json; p_recipe: Json }
@@ -506,6 +515,7 @@ export type Database = {
       verify_workshop_code: { Args: { p_code: string }; Returns: Json }
     }
     Enums: {
+        nfc_target_type: "profile" | "custom_url"
       user_role: "participant" | "instructor" | "admin"
     }
     CompositeTypes: {
@@ -634,6 +644,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      nfc_target_type: ["profile", "custom_url"],
       user_role: ["participant", "instructor", "admin"],
     },
   },
