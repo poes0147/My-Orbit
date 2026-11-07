@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { projectCardSchema } from "./project-card";
 import { recommendedClaySchema } from "./clay-recommendation";
+import { fallbackTitleTags } from "./title-tags";
 
 export const interviewRequestSchema = z.object({
   projectCard: projectCardSchema.optional(),
@@ -53,10 +54,10 @@ export type GeneratedProfile = z.infer<typeof profileGenerationSchema>;
 export const profileGenerationJsonSchema = {
   type: "object",
   properties: {
-    headline: { type: "string", description: "한국어 전문 타이틀, 60자 이하" },
+    headline: { type: "string", description: "한국어 전문 타이틀, 5~40자 권장, 최대 60자" },
     competency_tags: {
       type: "array",
-      items: { type: "string", description: "한국어 역량 키워드, 20자 이하" },
+      items: { type: "string", description: "서로 다른 한국어 명사형 역량 키워드, 2~10자 권장, 최대 15자" },
       minItems: 3,
       maxItems: 3,
     },
@@ -88,13 +89,8 @@ const toneDescriptions = {
 
 export function createFallbackProfile(input: InterviewRequest): GeneratedProfile {
   const project = input.stepData.project;
-  const keywordPool = [...input.stepData.keywords, ...input.stepData.persona.coreValues, project.role]
-    .map((value) => value.trim().slice(0, 20))
-    .filter(Boolean);
-  const tags = [...new Set(keywordPool)].slice(0, 3);
-  while (tags.length < 3) tags.push(["꾸준한 실행", "협업", "문제 해결"][tags.length]);
-
-  const headline = `${project.role}로 ${project.title}을 만들어가는 사람`.slice(0, 60);
+  const identity = fallbackTitleTags(input.stepData.keywords, input.stepData.persona.tone);
+  const headline = `${project.role}로 ${project.title}을 만들어가는 사람`.replace(/\s+/g, " ").slice(0, 60);
   const summary = `${project.problem} 문제를 해결하기 위해 ${project.role}로서 ${project.action}을 실천했습니다. 그 결과 ${project.outcome}`.slice(0, 300);
   const colors = {
     professional: ["차분한 네이비", "은은한 아이보리"],
@@ -106,7 +102,7 @@ export function createFallbackProfile(input: InterviewRequest): GeneratedProfile
 
   return profileGenerationSchema.parse({
     headline,
-    competency_tags: tags,
+    competency_tags: identity.coreCompetencies,
     project_summary: summary,
     object_guide: {
       primary_color: primary,

@@ -42,11 +42,18 @@ Supabase Google·Kakao 제공자와 웹 로그인 버튼을 활성화했습니�
 | `/dashboard` | 참여자 프로필·진행 현황 |
 | `/settings` | 계정 설정 |
 | `/p/{user_slug}` | 외부 방문자용 공개 프로필 |
-| `/t/{tag_id}` | NFC 태그 진입·프로필 연결 |
+| `/t/{tag_id}` | NFC·QR 공용 주소. 연결된 공개 프로필로 이동 |
+| `/tags/bind/{tag_id}` | 로그인한 사용자가 일회용 코드로 본인 공개 프로필을 최초 연결 |
 | `/admin/workshops` | 관리자 전용 코드 발급·전체 조회·참여 종료 |
 | `/admin/sessions` | 관리자 화면 별칭 |
 
 위 경로 중 일부는 현재 화면 골격만 있습니다. 실제 라우트와 기능 상태는 코드를 기준으로 확인하세요.
+
+### 개발용 NFC 태그 발급
+
+개발 Supabase SQL Editor에서 `select * from private.issue_nfc_tag();`를 실행합니다. 결과의 `tag_id`로 `/t/{tag_id}` 주소를 만들어 NFC 태그와 QR에 같은 주소를 사용합니다. `registration_code`는 최초 연결에 필요한 일회용 코드이므로 수령자에게 별도로 전달합니다. 휴대폰으로 검증할 때는 해당 기기에서 접속할 수 있는 HTTPS 배포 주소를 사용합니다.
+
+연결한 오브제는 대시보드의 **내 NFC 오브제**에서 공개 프로필이나 외부 HTTPS 주소로 목적지를 바꿀 수 있습니다. 기존 태그와 QR의 주소는 그대로 사용합니다.
 
 ## 개발 흐름
 
