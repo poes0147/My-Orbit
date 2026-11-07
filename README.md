@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# My Orbit
 
-## Getting Started
+취업·창업을 준비하는 청년이 자신의 경험과 강점을 AI와 함께 정리하고, 모바일 프로필과 직접 만든 NFC 클레이 오브제(‘나의 별’)로 소개하도록 돕는 퍼스널 브랜딩 서비스입니다. 초기에는 대학·청년지원기관 워크숍에서 사용성을 검증합니다.
 
-First, run the development server:
+## 기술 스택
+
+Next.js App Router · React · TypeScript · Tailwind CSS · Supabase(PostgreSQL·Auth 연결, Storage 후속) · Vercel
+
+## 개발 시작
+
+필요 환경: Node.js LTS와 npm
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+개발 서버는 [http://localhost:3000](http://localhost:3000)에서 확인합니다. `.env.example`을 `.env.local`로 복사하고 Supabase Connect에서 받은 프로젝트 URL과 Publishable key를 입력합니다. 실제 값이 들어 있는 `.env.local`은 Git에 올리지 않습니다. Supabase 공식 클라이언트 패키지를 설치했으며 개발 프로젝트의 인증 설정 API 응답을 확인했습니다. 앱의 소셜 로그인·세션 연결은 진행 중입니다.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| 명령 | 내용 |
+|---|---|
+| `npm run dev` | 로컬 개발 서버 실행 |
+| `npm run lint` | ESLint 검사 |
+| `npm run build` | Next.js 프로덕션 빌드 |
+| `npm run start` | 빌드 결과 실행 |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 현재 상태
 
-## Learn More
+Google/Kakao 로그인, 회원 DB 및 워크숍 참여 연결이 있습니다. 2026-11-03 로컬 보정에서 관리자 전용 코드 발급·전체 관리, PC 사이드바·모바일 탭, 실제 워크숍 헤더, 위저드 임시 저장 복원을 구현했습니다. 입력 초안은 계정·워크숍별로 이 탭의 sessionStorage에 저장하며 로그아웃 시 제거합니다. 비공개 AI 초안 생성·저장·수정 및 이력서 분석 기반 입력 자동 채우기는 로컬과 개발 DB에서 연결을 확인했습니다. 이력서 기능의 배포·권한 검증 잔여 항목은 아래 전용 문서를 참고하세요.
 
-To learn more about Next.js, take a look at the following resources:
+실제 로그인 계정으로 로컬 관리자 발급 → 코드 확인 → 빌더 진입 → 입력 새로고침 복원 → 세션 종료 → 재입장 차단을 검증했습니다. 대시보드의 실제 프로필 발행·NFC·조회수 집계는 해당 테이블과 기능이 없어 진행 중입니다. 상세 결과와 미완료 항목은 [스택 재점검 기록](./docs/reviews/2026-11-03-stack-audit.md)을 참고하세요. 이번 변경은 별도 작업 폴더 `D:\modu\my-orbit-workshop`의 미커밋 상태이며 Vercel에는 아직 반영되지 않았습니다.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Supabase Google·Kakao 제공자와 웹 로그인 버튼을 활성화했습니다. Google 로그인·로그아웃·재로그인과 Kakao 로그인·로그아웃은 사용자 확인을 받았고, 실제 DB 회원 등록도 확인했습니다. Kakao 재로그인과 장시간 세션 유지·갱신 검증은 남아 있습니다. 로그인은 서버 PKCE와 HttpOnly 쿠키로 처리하고 보호된 화면은 Next.js Proxy에서 사용자 신원을 확인합니다. 회원용 `public.users` 생성·자동 등록·기존 회원 보충·RLS를 개발 DB에 적용하고 실제 Postgres에서 권한 격리를 검증했습니다. 웹 배포 연결은 별도 작업입니다. 완료된 기능은 실제 동작과 인수 조건을 확인한 뒤에만 완료로 표시합니다.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 주요 경로
 
-## Deploy on Vercel
+| 경로 | 용도 |
+|---|---|
+| `/login` | 참여자 로그인 진입 화면 |
+| `/session` | 워크숍 참여 세션 진입 |
+| `/builder` | 프로필 작성 영역 |
+| `/dashboard` | 참여자 프로필·진행 현황 |
+| `/settings` | 계정 설정 |
+| `/p/{user_slug}` | 외부 방문자용 공개 프로필 |
+| `/t/{tag_id}` | NFC·QR 공용 주소. 연결된 공개 프로필로 이동 |
+| `/tags/bind/{tag_id}` | 로그인한 사용자가 일회용 코드로 본인 공개 프로필을 최초 연결 |
+| `/admin/workshops` | 관리자 전용 코드 발급·전체 조회·참여 종료 |
+| `/admin/sessions` | 관리자 화면 별칭 |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+위 경로 중 일부는 현재 화면 골격만 있습니다. 실제 라우트와 기능 상태는 코드를 기준으로 확인하세요.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 개발용 NFC 태그 발급
+
+개발 Supabase SQL Editor에서 `select * from private.issue_nfc_tag();`를 실행합니다. 결과의 `tag_id`로 `/t/{tag_id}` 주소를 만들어 NFC 태그와 QR에 같은 주소를 사용합니다. `registration_code`는 최초 연결에 필요한 일회용 코드이므로 수령자에게 별도로 전달합니다. 휴대폰으로 검증할 때는 해당 기기에서 접속할 수 있는 HTTPS 배포 주소를 사용합니다.
+
+연결한 오브제는 대시보드의 **내 NFC 오브제**에서 공개 프로필이나 외부 HTTPS 주소로 목적지를 바꿀 수 있습니다. 기존 태그와 QR의 주소는 그대로 사용합니다.
+
+## 개발 흐름
+
+기능 요구사항과 인수 조건은 ign8t 프로젝트 문서와 작업 스펙을 기준으로 합니다. 구현을 시작하기 전에 기준 컨텍스트·마스터 스펙·다음 작업을 확인하고, 선택한 작업의 상세 스펙이 없으면 먼저 보완합니다. 스펙에 없는 구현을 임의로 추가하지 않습니다.
+
+브랜치 분리와 병합은 사용자가 직접 관리합니다. Codex는 현재 작업공간에서 구현하고 변경 사항과 확인 결과를 보고합니다. 작업 내용을 `dev`에 반영할 때는 이를 설명하는 PR을 남깁니다. `main`은 상용 배포용으로 유지합니다. 현재 배포 연결 상태는 README의 “현재 상태”를 확인하세요.
+
+개발 전에 변경할 스택에 적합한 모델을 먼저 추천하고, 사용자가 이해하기 쉽도록 현재 단계와 막힌 이유를 쉬운 말로 공유합니다.
+
+## 제품 원칙
+
+- 공개 프로필에는 사용자가 확인하고 공개하기로 한 정보만 표시합니다.
+- 이력서 원본과 AI 대화 등 개인 자료는 비공개로 취급하고, 강사 화면에도 기본적으로 노출하지 않습니다.
+- DB 접근은 서버 권한 확인과 Supabase RLS 정책을 함께 적용합니다. UI에서 버튼을 숨기는 것만으로 권한을 보호하지 않습니다.
+- NFC는 태그에 미리 기록된 URL을 서버에서 프로필로 연결합니다. 브라우저에서 NFC 칩에 직접 쓰는 기능은 제품 범위에 포함하지 않습니다.
+
+## 문서
+
+- [`이력서 분석·입력 자동 채우기`](./docs/plans/resume-analysis.md): PDF 4MB·텍스트 분석, 검토·적용 및 확인/미확인 요약
+
+- [`프로필 초안 편집·저장·재조회`](./docs/plans/profile-draft-editing.md): 직접 수정, AI 부분 재작성 및 최신 확인 기록
+- [`OpenAI 연결`](./docs/setup/openai.md): Luna 환경변수 및 실제 생성 검증
+- [`AGENTS.md`](./AGENTS.md): Codex가 작업 전에 읽는 저장소 지침과 개발 합의
+- ign8t: 승인된 제품 마스터 스펙, 작업 목록 및 기능별 작업 스펙
+- [`3단계 입력 폼 구현 준비`](./docs/plans/profile-wizard.md): 다음 작업의 확정 범위와 스펙 보완 항목
+- [`관리자 워크숍 코드 발급`](./docs/plans/admin-workshops.md): 최신 권한·DB 적용·검증 결과
+- [`스택 재점검 기록`](./docs/reviews/2026-11-03-stack-audit.md): 리셋된 스펙 대비 수정 및 남은 항목
