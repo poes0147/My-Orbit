@@ -5,12 +5,14 @@ import { projectCardSchema } from "@/lib/builder/project-card";
 import type { Json } from "@/lib/supabase/database.types";
 
 import { useState } from "react";
-import Link from "next/link";
 import PendingIndicator from "@/components/layouts/pending-indicator";
+import ProfilePublication from "./profile-publication";
+import ThemeSelector from "./theme-selector";
 
 type Profile = {
   id: string;
   slug: string;
+  display_name: string | null;
   headline: string;
   bio: string;
   competency_tags: string[];
@@ -20,8 +22,11 @@ type Profile = {
 
 type RepresentativeProject = { id: string; title: string; description: string; star_card: Json | null; link_url: string | null };
 
-export default function ProfileEditor({ profile: initialProfile, representativeProject }: { profile: Profile; representativeProject?: RepresentativeProject }) {
+export default function ProfileEditor({ profile: initialProfile, representativeProject, avatarUrl }: {
+  profile: Profile; representativeProject?: RepresentativeProject; avatarUrl: string | null;
+}) {
   const [profile, setProfile] = useState(initialProfile);
+  const [savedSlug, setSavedSlug] = useState(initialProfile.slug);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -33,14 +38,15 @@ export default function ProfileEditor({ profile: initialProfile, representativeP
       const response = await fetch(`/api/profiles/${profile.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug: profile.slug, headline: profile.headline, bio: profile.bio, competency_tags: profile.competency_tags.map(tag => tag.trim()).filter(Boolean) }),
+        body: JSON.stringify({ slug: profile.slug, display_name: profile.display_name ?? "", headline: profile.headline, bio: profile.bio, competency_tags: profile.competency_tags.map(tag => tag.trim()).filter(Boolean) }),
       });
       const result = await response.json();
       if (!response.ok) {
         setMessage(result?.error?.message ?? "저장하지 못했어요.");
         return;
       }
-      setProfile(result.profile);
+      setProfile(previous => ({ ...result.profile, theme_preset: previous.theme_preset }));
+      setSavedSlug(result.profile.slug);
       setMessage("저장했어요.");
     } catch {
       setMessage("연결을 확인한 뒤 다시 시도해 주세요.");
@@ -57,7 +63,16 @@ export default function ProfileEditor({ profile: initialProfile, representativeP
       <h1 className="mt-2 text-3xl font-semibold tracking-tight">내 프로필 편집</h1>
       <p className="mt-2 text-sm text-stone-600">소개 문구와 핵심 역량을 수정할 수 있어요.</p>
     </header>
+    <ProfilePublication published={profile.is_published} slug={savedSlug} disabled={saving}
+      onChange={(is_published, slug) => {
+        setSavedSlug(slug);
+        setProfile(previous => ({ ...previous, is_published }));
+      }} />
     <form onSubmit={save} className="space-y-6 rounded-3xl border border-stone-200 bg-white p-5 sm:p-8">
+      <label className="block text-sm font-medium">공개 이름
+        <input className={fieldClass} value={profile.display_name ?? ""} maxLength={120}
+          onChange={event => setProfile({ ...profile, display_name: event.target.value })} />
+      </label>
       <label className="block text-sm font-medium">프로필 주소
         <input className={fieldClass} value={profile.slug} maxLength={80} pattern="[a-z0-9]+(-[a-z0-9]+)*" required onChange={event => setProfile({ ...profile, slug: event.target.value.toLowerCase() })} />
       </label>
@@ -81,9 +96,11 @@ export default function ProfileEditor({ profile: initialProfile, representativeP
       {message && <p role="status" className="text-sm text-amber-900">{message}</p>}
       <div className="flex flex-wrap items-center gap-3">
         <button type="submit" disabled={saving} className="min-h-12 rounded-xl bg-stone-900 px-6 text-sm font-semibold text-white disabled:opacity-50">{saving ? "저장 중…" : "변경사항 저장"}</button>
-        {profile.is_published && <Link href={`/p/${profile.slug}`} className="inline-flex min-h-12 items-center rounded-xl border border-stone-300 px-5 text-sm font-medium">공개 프로필 보기</Link>}
       </div>
     </form>
+    <ThemeSelector savedTheme={profile.theme_preset} fullName={profile.display_name?.trim() || profile.slug}
+      avatarUrl={avatarUrl} headline={profile.headline} tags={profile.competency_tags} bio={profile.bio}
+      onSaved={theme_preset => setProfile(previous => ({ ...previous, theme_preset }))} />
     {representativeProject && <RepresentativeProjectEditor profileId={profile.id} project={representativeProject} />}
   </section>;
 }

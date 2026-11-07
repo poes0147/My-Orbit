@@ -14,7 +14,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ prof
     bio: profile.bio,
     email: profile.contact_email,
     phone: profile.contact_phone,
-    url: new URL("/p/" + profile.slug, request.url).href,
+    url: new URL("/p/" + profile.slug, process.env.NEXT_PUBLIC_APP_URL || request.url).href,
   }), {
     headers: {
       ...headers,

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createRequestClient } from "@/lib/supabase/request-client";
 import { editableTextSchema } from "@/lib/builder/editable-draft";
 import { readSavedDraft } from "@/lib/builder/read-saved-draft";
+import { titleTagsSchema } from "@/lib/builder/title-tags";
 
 const patchSchema = z.object({ id: z.string().uuid(), updatedAt: z.string().datetime({ offset: true }), current: editableTextSchema }).strict();
 const workshopSchema = z.string().uuid().nullable();
@@ -37,6 +38,12 @@ export async function PATCH(request: NextRequest) {
   if (!row) return json({ success: false, message: "수정할 초안을 찾을 수 없어요." }, 404);
   const answers = z.record(z.string(), z.unknown()).safeParse(row.answers);
   if (!answers.success || !editableTextSchema.safeParse(answers.data.generated_draft).success) return json({ success: false, message: "초안 형식이 올바르지 않아요." }, 422);
+  const previous = editableTextSchema.safeParse(answers.data.edited_draft ?? answers.data.generated_draft);
+  const identityChanged = !previous.success || previous.data.headline !== current.headline
+    || previous.data.competency_tags.some((tag, index) => tag !== current.competency_tags[index]);
+  if (identityChanged && !titleTagsSchema.safeParse({ professionalTitle: current.headline, coreCompetencies: current.competency_tags }).success) {
+    return json({ success: false, message: "타이틀은 5~60자, 핵심 역량은 서로 다른 2~15자 태그 3개로 입력해 주세요." }, 400);
+  }
   const { data: saved, error: saveError } = await supabase.from("ai_interview_sessions").update({ answers: { ...answers.data, edited_draft: current } })
     .eq("id", id).eq("user_id", user.id).eq("updated_at", updatedAt).select("updated_at").maybeSingle();
   if (saveError) return json({ success: false, message: "저장하지 못했어요. 수정 내용은 유지됩니다. 다시 시도해 주세요." }, 503);

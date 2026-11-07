@@ -5,6 +5,7 @@ import { readAvailableClay } from "@/lib/builder/clay-catalog";
 import { clayRoles, resolveClayColors, type AvailableClay } from "@/lib/builder/clay-recommendation";
 import { createRequestClient } from "@/lib/supabase/request-client";
 import { getProfileAiConfig } from "@/lib/builder/openai-config";
+import { fallbackTitleTags, titleTagsSchema } from "@/lib/builder/title-tags";
 import {
   buildProfilePrompt,
   createFallbackProfile,
@@ -161,7 +162,15 @@ async function streamOpenAi(
         ...decoded,
         object_guide: { ...guide, primary_color: "목록에서 선택", secondary_color: "목록에서 선택", color_ratio: "색상별 비율 참고" },
       });
-      if (parsed.success) return { profile: parsed.data, selections: guide?.color_selections };
+      if (parsed.success) {
+        const identity = titleTagsSchema.safeParse({ professionalTitle: parsed.data.headline, coreCompetencies: parsed.data.competency_tags });
+        if (!identity.success) {
+          const fallback = fallbackTitleTags(input.stepData.keywords, input.stepData.persona.tone);
+          parsed.data.headline = fallback.professionalTitle;
+          parsed.data.competency_tags = fallback.coreCompetencies;
+        }
+        return { profile: parsed.data, selections: guide?.color_selections };
+      }
       lastFailure = "LLM_INVALID_OUTPUT";
       break;
     } catch (error) {

@@ -36,10 +36,11 @@ async function EditableProfile({ params }: { params: Promise<{ profileId: string
   }
 
   const { data: profile, error } = await supabase.from("profiles")
-    .select("id,slug,headline,bio,competency_tags,theme_preset,is_published,project_items(id,title,description,is_draft_derived,star_card,link_url)")
+    .select("id,slug,headline,bio,competency_tags,theme_preset,is_published,display_name,avatar_url,project_items(id,title,description,is_draft_derived,star_card,link_url)")
     .eq("id", profileId).eq("user_id", user.id).maybeSingle();
   if (error) throw new Error("프로필을 불러오지 못했습니다.");
   if (!profile) notFound();
-  const { project_items, ...editableProfile } = profile;
-  return <ProfileEditor profile={editableProfile} representativeProject={project_items.find(project => project.is_draft_derived)} />;
+  const { project_items, avatar_url, ...editableProfile } = profile;
+  return <ProfileEditor profile={editableProfile} avatarUrl={avatar_url}
+    representativeProject={project_items.find(project => project.is_draft_derived)} />;
 }

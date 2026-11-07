@@ -161,6 +161,41 @@ export type Database = {
         }
         Relationships: []
       }
+      nfc_tags: {
+        Row: {
+          claim_code_hash: string | null
+          created_at: string
+          is_active: boolean
+          mapped_at: string | null
+          profile_id: string | null
+          tag_id: string
+        }
+        Insert: {
+          claim_code_hash?: string | null
+          created_at?: string
+          is_active?: boolean
+          mapped_at?: string | null
+          profile_id?: string | null
+          tag_id: string
+        }
+        Update: {
+          claim_code_hash?: string | null
+          created_at?: string
+          is_active?: boolean
+          mapped_at?: string | null
+          profile_id?: string | null
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nfc_tags_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -438,6 +473,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+        bind_nfc_tag: {
+          Args: { p_tag_id: string; p_registration_code: string; p_ip_hash: string }
+          Returns: { result_code: string; public_slug: string | null; mapped_at: string | null }[]
+        }
       claim_project_card_attempt: { Args: { p_ip_hash: string }; Returns: boolean }
       claim_resume_analysis_attempt: {
         Args: { p_ip_hash: string }
@@ -456,6 +495,10 @@ export type Database = {
       get_current_workshop_session: { Args: never; Returns: Json }
       join_workshop_session: { Args: { p_code: string }; Returns: Json }
       profile_owner_status: { Args: { p_profile_id: string }; Returns: string }
+        resolve_nfc_tag: {
+          Args: { p_tag_id: string }
+          Returns: { tag_status: string; public_slug: string | null }[]
+        }
       save_clay_recipe: {
         Args: { p_id: string; p_items: Json; p_recipe: Json }
         Returns: string

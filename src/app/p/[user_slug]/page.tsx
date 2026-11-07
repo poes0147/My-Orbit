@@ -5,12 +5,8 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getPublicProfile, webUrl } from "@/modules/public-profile/get-public-profile";
 import PageviewBeacon from "@/modules/public-profile/pageview-beacon";
-
-const themes = {
-  default: "bg-stone-100 text-stone-950",
-  accent: "bg-amber-100 text-amber-950",
-  minimal: "bg-white text-slate-950",
-};
+import ProfileHeaderCard, { ProfileHeaderSkeleton } from "@/modules/public-profile/profile-header-card";
+import { profileActionClass, profileTheme } from "@/modules/public-profile/theme";
 
 type Props = { params: Promise<{ user_slug: string }> };
 
@@ -30,42 +26,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default function PublicProfilePage({ params }: Props) {
-  return <Suspense><PublicProfile params={params} /></Suspense>;
+  return <Suspense fallback={<ProfileHeaderSkeleton />}><PublicProfile params={params} /></Suspense>;
 }
 
 async function PublicProfile({ params }: Props) {
   const profile = await getPublicProfile((await params).user_slug);
   if (!profile) notFound();
 
-  const name = profile.display_name?.trim() || profile.slug;
-  const avatar = webUrl(profile.avatar_url, true);
-  const theme = themes[profile.theme_preset as keyof typeof themes] ?? themes.default;
-  return <main className={"flex-1 px-4 py-8 sm:px-6 sm:py-12 " + theme}>
+  const theme = profileTheme(profile.theme_preset);
+  return <main data-profile-theme={theme.id} style={theme.style} className="flex-1 bg-[var(--profile-bg)] px-4 py-8 text-[var(--profile-text)] [font-family:var(--profile-font)] sm:py-12">
     <PageviewBeacon profileId={profile.id} />
-    <article className="mx-auto max-w-2xl space-y-6">
-      <header className="space-y-4 rounded-2xl border border-black/10 bg-white p-5 sm:p-7">
-        <div className="flex items-center gap-4">
-          {avatar
-            // eslint-disable-next-line @next/next/no-img-element -- Public avatars can use user-supplied HTTPS hosts.
-            ? <img src={avatar} alt="" width={64} height={64} referrerPolicy="no-referrer" className="size-16 shrink-0 rounded-full object-cover" />
-            : <span aria-hidden className="grid size-16 shrink-0 place-items-center rounded-full bg-amber-100 text-xl font-semibold text-amber-950">{Array.from(name)[0]}</span>}
-          <div className="min-w-0">
-            <h1 className="break-words text-2xl font-bold">{name}</h1>
-            {profile.headline && <p className="mt-1 break-words text-stone-700">{profile.headline}</p>}
-          </div>
-        </div>
-        <a href={"/api/profiles/" + profile.slug + "/vcard"} className="inline-flex min-h-11 items-center rounded-xl bg-stone-900 px-4 text-sm font-semibold text-white">
+    <article className="mx-auto w-full max-w-[480px] space-y-6">
+      <ProfileHeaderCard
+        fullName={profile.display_name?.trim() || profile.slug}
+        avatarUrl={profile.avatar_url}
+        professionalTitle={profile.headline}
+        competencyTags={profile.competency_tags}
+        bioSummary={profile.bio}
+        themePresetId={profile.theme_preset}
+        action={<a href={"/api/profiles/" + profile.slug + "/vcard"} className={profileActionClass}>
           연락처 저장 (.vcf)
-        </a>
-      </header>
-      {profile.competency_tags.length > 0 && <section className="rounded-2xl border border-black/10 bg-white p-5">
-        <h2 className="font-semibold">핵심 역량</h2>
-        <ul className="mt-3 flex flex-wrap gap-2">{profile.competency_tags.slice(0, 3).map((tag, index) => <li key={index} className="max-w-full break-words rounded-full bg-amber-100 px-3 py-1 text-sm text-amber-950">{tag}</li>)}</ul>
-      </section>}
-      {profile.bio && <section className="rounded-2xl border border-black/10 bg-white p-5">
-        <h2 className="font-semibold">자기소개</h2>
-        <p className="mt-3 whitespace-pre-wrap break-words leading-7">{profile.bio}</p>
-      </section>}
+        </a>}
+      />
       {profile.project_items.length > 0 && <section className="space-y-3">
         <h2 className="font-semibold">대표 프로젝트</h2>
         {profile.project_items.map(project => {
