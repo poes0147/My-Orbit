@@ -25,7 +25,11 @@ export async function POST(request: NextRequest) {
   if (!apiKey) return unavailable();
   const max = input.field === "title" ? 60 : input.field === "skill_tag" ? 20 : 300;
   const tones = { professional: "객관적이고 신뢰감 있게", bold: "능동적이고 도전적으로", approachable: "따뜻하고 친근하게" };
-  const instruction = input.action === "shorten" ? `핵심 의미를 유지하면서 약 절반으로 줄이세요. 반드시 ${Math.max(1, Math.floor(input.currentText.length * 0.5))}자 이내로 작성하세요.` : `${tones[input.targetTone ?? "professional"]} 말투를 바꾸세요.`;
+  const instruction = input.action === "shorten"
+    ? `핵심 의미를 유지하면서 약 절반으로 줄이세요. 반드시 ${Math.max(1, Math.floor(input.currentText.length * 0.5))}자 이내로 작성하세요.`
+    : input.action === "emphasize_metrics"
+      ? "이미 적힌 수치와 단위를 그대로 보존하고 문장 앞쪽에서 강조하세요. 새 수치나 계산 결과를 추가하지 마세요."
+      : `${tones[input.targetTone ?? "professional"]} 말투를 바꾸세요.`;
   try {
     const response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },

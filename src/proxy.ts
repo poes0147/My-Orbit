@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createRequestClient } from "@/lib/supabase/request-client";
+import { hasPublicProfile } from "@/modules/public-profile/get-public-profile";
 
 export async function proxy(request: NextRequest) {
+  if (request.nextUrl.pathname.startsWith("/p/")) {
+    try {
+      const slug = request.nextUrl.pathname.slice(3);
+      // Check before the streamed shell commits to HTTP 200.
+      if (await hasPublicProfile(slug)) return NextResponse.next();
+      return NextResponse.rewrite(new URL("/_not-found", request.url), { status: 404 });
+    } catch {
+      return new NextResponse("공개 프로필을 불러오지 못했어요.", { status: 503 });
+    }
+  }
   const { supabase, respond } = createRequestClient(request);
   try {
     const { data: { user }, error } = await supabase.auth.getUser();
@@ -22,5 +33,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/builder/:path*", "/dashboard/:path*", "/session/:path*", "/settings/:path*", "/t/bind", "/instructor/:path*", "/admin/:path*"],
+  matcher: ["/p/:slug", "/builder/:path*", "/dashboard/:path*", "/session/:path*", "/settings/:path*", "/t/bind", "/instructor/:path*", "/admin/:path*"],
 };

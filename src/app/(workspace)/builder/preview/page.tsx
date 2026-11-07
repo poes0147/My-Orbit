@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import ProjectCardLines from "@/components/builder/project-card-lines";
+import CommitProfileAction from "@/components/builder/commit-profile-action";
 import { getWorkspaceContext } from "@/lib/auth/workspace-context";
 import { readSavedDraft } from "@/lib/builder/read-saved-draft";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -19,10 +21,10 @@ export default async function DraftPreviewPage() {
   if (result.status !== 200) throw new Error(result.message);
   const draft = result.draft?.current;
   const profile = draft ? await supabase.from("profiles")
-    .select("bio,project_items(id,title,description,sort_order)")
+    .select("id,bio,is_published,project_items(id,title,description,sort_order,is_draft_derived)")
     .eq("user_id", context.id).maybeSingle() : null;
   if (profile?.error) throw new Error("프로필을 불러오지 못했어요.");
-  const projects = [...(profile?.data?.project_items ?? [])].sort((a, b) => a.sort_order - b.sort_order);
+  const projects = (profile?.data?.project_items ?? []).filter(project => !project.is_draft_derived).sort((a, b) => a.sort_order - b.sort_order);
 
   return (
     <section className="mx-auto w-full max-w-[480px] break-words break-keep">
@@ -31,7 +33,7 @@ export default async function DraftPreviewPage() {
         <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-700">비공개 미리보기</span>
       </div>
       <p className="mt-4 text-sm leading-6 text-stone-600">이 미리보기는 본인에게만 표시됩니다.</p>
-      {draft ? (
+      {draft && result.draft ? (
         <article className="mt-6 rounded-2xl border border-stone-200 bg-white p-5 sm:p-7">
           <header>
             <div aria-hidden className="grid size-12 place-items-center rounded-full bg-amber-50 font-semibold text-amber-900">{Array.from(context.name.trim())[0] ?? "✦"}</div>
@@ -44,7 +46,12 @@ export default async function DraftPreviewPage() {
           {profile?.data?.bio.trim() && <p className="mt-5 whitespace-pre-wrap text-sm leading-7 text-stone-700">{profile.data.bio}</p>}
           <section className="mt-6 border-t border-stone-200 pt-5">
             <h2 className="font-semibold">대표 프로젝트 요약</h2>
-            <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-stone-700">{draft.project_summary}</p>
+            {draft.project_card ? <>
+              <h3 className="mt-2 font-medium">{draft.project_card.title}</h3>
+              <p className="mt-1 break-words text-sm text-stone-600">{draft.project_card.role}</p>
+              <ProjectCardLines card={draft.project_card} />
+              {draft.project_card.link_url && <a href={draft.project_card.link_url} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-sm text-amber-900 underline">프로젝트 링크 열기</a>}
+            </> : <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-stone-700">{draft.project_summary}</p>}
           </section>
           {projects.map(project => (
             <section key={project.id} className="mt-5 border-t border-stone-200 pt-4">
@@ -52,6 +59,7 @@ export default async function DraftPreviewPage() {
               <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-stone-700">{project.description}</p>
             </section>
           ))}
+          <CommitProfileAction draftId={result.draft.id} content={draft} profile={profile?.data ? { id: profile.data.id, is_published: profile.data.is_published } : null} />
         </article>
       ) : (
         <div className="mt-8 rounded-2xl border border-stone-200 p-5">

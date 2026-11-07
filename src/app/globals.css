@@ -1,5 +1,36 @@
 @import "tailwindcss";
 
+@layer base {
+  :where(button:enabled, a[href], summary, select:enabled,
+    input:is([type="checkbox"], [type="radio"]):enabled,
+    label:has(> input:is([type="checkbox"], [type="radio"]):enabled)) {
+    cursor: pointer;
+  }
+
+  :where(button, select, input:is([type="checkbox"], [type="radio"])):disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  :where(button, a[href], summary, select,
+    input:is([type="checkbox"], [type="radio"])):focus-visible {
+    outline: 2px solid #b45309;
+    outline-offset: 2px;
+  }
+
+  @media (hover: hover) {
+    :where(button:enabled, a[href], summary, select:enabled,
+      label:has(> input:is([type="checkbox"], [type="radio"]):enabled)):hover {
+      background-image: linear-gradient(rgb(120 113 108 / 12%), rgb(120 113 108 / 12%));
+    }
+
+    :where(a[href]):hover {
+      text-decoration-line: underline;
+      text-underline-offset: 0.2em;
+    }
+  }
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ProjectCard } from "./project-card";
 
 export const valueOptions = ["성장", "협업", "창의성", "문제 해결", "꾸준함", "새로운 도전"] as const;
 export const toneOptions = { professional: "차분하고 전문적으로", challenging: "도전적이고 자신 있게", authentic: "진솔하고 신뢰감 있게", creative: "창의적이고 위트 있게" } as const;
@@ -23,14 +24,14 @@ export function validateDraft(draft: Draft, step: number): DraftErrors {
   for (const issue of result.error.issues) errors[issue.path[0] as keyof Draft] = issue.message;
   return errors;
 }
-export function createWizardPayload(draft: Draft, workshopSessionId: string | null) {
-  return { workshopSessionId, stepData: { keywords: keywordList(draft.keywords), project: { title: draft.experience.trim(), role: draft.role.trim(), problem: draft.situation.trim(), action: draft.action.trim(), outcome: draft.result.trim() }, persona: { coreValues: draft.values, tone: draft.tone } } };
+export function createWizardPayload(draft: Draft, workshopSessionId: string | null, projectCard?: ProjectCard) {
+  return { workshopSessionId, projectCard, stepData: { keywords: keywordList(draft.keywords), project: { title: draft.experience.trim(), role: draft.role.trim(), problem: draft.situation.trim(), action: draft.action.trim(), outcome: draft.result.trim() }, persona: { coreValues: draft.values, tone: draft.tone } } };
 }
 export type WizardPayload = ReturnType<typeof createWizardPayload>;
 export function restoreDraft(raw: string | null) {
   if (!raw) return null;
   try {
-    const result = z.object({ version: z.literal(1), draft: storageDraftSchema, step: z.number().int().min(0).max(2), review: z.boolean() }).safeParse(JSON.parse(raw));
+    const result = z.object({ version: z.literal(1), draft: storageDraftSchema, step: z.number().int().min(0).max(2), review: z.boolean(), projectCardDraft: z.object({ source: z.string(), card: z.unknown() }).optional().catch(undefined) }).safeParse(JSON.parse(raw));
     return result.success ? result.data : null;
   } catch { return null; }
 }

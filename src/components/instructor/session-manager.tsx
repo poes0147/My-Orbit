@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 
 type Session = { id: string; session_code: string; title: string; organization_name: string; status: string; expires_at: string; max_capacity: number };
-const button = "min-h-11 rounded-xl border border-stone-300 px-4 py-2 text-sm font-semibold hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:opacity-50";
+const button = "min-h-11 rounded-xl border border-stone-300 px-4 py-2 text-sm font-semibold enabled:hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:opacity-50";
 const input = "mt-2 min-h-12 w-full rounded-xl border border-stone-300 bg-white px-3 text-base focus:outline-2 focus:outline-amber-700";
 
 export default function SessionManager() {
@@ -81,7 +81,7 @@ export default function SessionManager() {
   return <>
     <div className="flex flex-wrap items-start justify-between gap-5">
       <div><h1 className="text-3xl font-semibold tracking-tight">워크숍 코드 관리</h1><p className="mt-3 max-w-xl text-sm leading-6 text-stone-600">워크숍 참여 코드를 발급하고 전체 워크숍의 상태를 관리하세요.</p></div>
-      <button ref={createButton} className={`${button} border-stone-900 bg-stone-900 text-white hover:bg-stone-700`} onClick={() => { setError(""); dialog.current?.showModal(); }}>새 워크숍 만들기</button>
+      <button ref={createButton} className={`${button} border-stone-900 bg-stone-900 text-white enabled:hover:bg-stone-700`} onClick={() => { setError(""); dialog.current?.showModal(); }}>새 워크숍 만들기</button>
     </div>
     <p role="status" className="mt-5 text-sm text-amber-900">{notice}</p>
     {error && <div role="alert" className="mt-4 rounded-xl bg-red-50 p-4 text-red-800">{error} <button className="underline" onClick={() => load()}>다시 불러오기</button></div>}
@@ -109,7 +109,7 @@ export default function SessionManager() {
         <div className="grid grid-cols-2 gap-4"><label className="block text-sm font-medium">정원 (명)<input required type="number" min={1} max={500} defaultValue={35} name="capacity" className={input} /></label><label className="block text-sm font-medium">참여 가능 시간<input required type="number" min={1} max={168} defaultValue={24} name="duration" className={input} /></label></div>
         <p className="text-xs leading-5 text-stone-600">생성한 시점부터 설정한 시간 동안 참여할 수 있어요. 기본 24시간이며, 최대 168시간(7일)까지 설정할 수 있어요.</p>
         {error && <p role="alert" className="text-sm text-red-800">{error}</p>}
-        <div className="flex justify-end gap-2 pt-3"><button type="button" disabled={busy} className={button} onClick={() => dialog.current?.close()}>취소</button><button disabled={busy} className={`${button} bg-stone-900 text-white hover:bg-stone-700`}>{busy ? "만드는 중…" : "워크숍 만들기"}</button></div>
+        <div className="flex justify-end gap-2 pt-3"><button type="button" disabled={busy} className={button} onClick={() => dialog.current?.close()}>취소</button><button disabled={busy} className={`${button} bg-stone-900 text-white enabled:hover:bg-stone-700`}>{busy ? "만드는 중…" : "워크숍 만들기"}</button></div>
       </form>
     </dialog>
     <dialog ref={presentation} aria-labelledby="present-title" onClose={() => setPresenting(null)} className="fixed inset-0 m-0 h-dvh max-h-none w-screen max-w-none bg-[#f6f2e9] p-6 text-stone-950 open:flex open:flex-col open:items-center open:justify-center">

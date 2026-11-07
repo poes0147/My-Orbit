@@ -7,7 +7,7 @@ export async function getDashboardSummary() {
   const context = await getWorkspaceContext();
   const supabase = await createSupabaseServerClient();
   const [profileResult, interviewResult, draftResult] = await Promise.all([
-    supabase.from("profiles").select("id,slug,headline,is_published,updated_at").eq("user_id", context.id).maybeSingle(),
+    supabase.from("profiles").select("id,slug,headline,competency_tags,is_published,updated_at").eq("user_id", context.id).maybeSingle(),
     supabase.from("ai_interview_sessions").select("status,updated_at").eq("user_id", context.id).order("updated_at", { ascending: false }).limit(1).maybeSingle(),
     context.workshopUnavailable ? null : readSavedDraft(supabase, context.id, context.workshop?.sessionId),
   ]);

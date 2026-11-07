@@ -15,7 +15,7 @@ export default async function DashboardPage() {
         : "저장된 기록 없음";
   const profileStatus = summary.profileUnavailable
     ? "확인할 수 없음"
-    : profile?.is_published ? "공개 중" : draftHeadline ? "초안 저장됨" : profile ? "발행 전" : summary.draftUnavailable ? "확인할 수 없음" : "프로필 없음";
+    : profile?.is_published ? "공개 중" : profile ? "비공개 저장됨" : draftHeadline ? "초안 저장됨" : summary.draftUnavailable ? "확인할 수 없음" : "프로필 없음";
   const journey = [
     { title: "경험을 정리해요", detail: summary.interviewUnavailable ? "인터뷰 기록을 불러오지 못했어요." : summary.interview ? "저장된 인터뷰 기록의 상태예요." : "인터뷰 응답의 저장 기능은 아직 연결되지 않았어요.", status: interviewStatus },
     { title: "프로필을 다듬어요", detail: summary.profileUnavailable ? "프로필을 불러오지 못했어요. 잠시 후 다시 확인해 주세요." : profile ? profile.headline || "한 줄 소개를 작성해 주세요." : "프로필을 만들면 이곳에서 발행 상태를 확인할 수 있어요.", status: profileStatus },
@@ -69,7 +69,8 @@ export default async function DashboardPage() {
             <span className="text-sm font-semibold text-stone-500">집계 기능 준비 중</span>
           </div>
           <div className="flex items-center justify-between gap-4 py-4">
-            <div className="min-w-0"><p className="text-sm font-medium">프로필 저장·공개</p><p className="mt-1 break-words text-xs text-stone-500">{draftHeadline || profile?.headline || profile?.slug || "저장한 초안이 여기에 표시돼요."}</p>
+            <div className="min-w-0"><p className="text-sm font-medium">프로필 저장·공개</p><p className="mt-1 break-words text-xs text-stone-500">{profile?.headline || profile?.slug || draftHeadline || "저장한 초안이 여기에 표시돼요."}</p>
+              {Boolean(profile?.competency_tags.length) && <p className="mt-1 break-words text-xs text-stone-600">{profile?.competency_tags.join(" · ")}</p>}
               {draftHeadline && <Link href="/builder/preview" prefetch={false} className="inline-flex min-h-11 items-center rounded text-sm font-semibold text-amber-900 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-amber-700">저장된 초안 미리보기</Link>}
             </div>
             <span className="shrink-0 text-sm font-semibold text-stone-700">{profileStatus}</span>

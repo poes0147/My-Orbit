@@ -104,7 +104,7 @@ export default function SessionCodeForm() {
     <button
       type="submit"
       disabled={!validCode || busy}
-      className="h-13 w-full rounded-xl bg-stone-900 text-sm font-semibold text-white transition hover:bg-stone-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 disabled:cursor-not-allowed disabled:bg-stone-300 sm:h-14 sm:rounded-2xl sm:text-base"
+      className="h-13 w-full rounded-xl bg-stone-900 text-sm font-semibold text-white transition enabled:hover:bg-stone-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 disabled:cursor-not-allowed disabled:bg-stone-300 sm:h-14 sm:rounded-2xl sm:text-base"
     >
       {busy ? "확인 중…" : verifiedSession ? "이 워크숍에 참여하기" : "참여 코드 확인"}
     </button>

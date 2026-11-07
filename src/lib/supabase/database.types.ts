@@ -59,35 +59,155 @@ export type Database = {
           },
         ]
       }
+      clay_materials: {
+        Row: {
+          code: string
+          color_code: string
+          created_at: string
+          description: string
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          color_code: string
+          created_at?: string
+          description?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          color_code?: string
+          created_at?: string
+          description?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      clay_recipe_items: {
+        Row: {
+          material_id: string
+          parts: number
+          recipe_id: string
+        }
+        Insert: {
+          material_id: string
+          parts: number
+          recipe_id: string
+        }
+        Update: {
+          material_id?: string
+          parts?: number
+          recipe_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clay_recipe_items_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "clay_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clay_recipe_items_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "clay_recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clay_recipes: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          is_active: boolean
+          result_color_code: string
+          result_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          result_color_code: string
+          result_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          result_color_code?: string
+          result_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
+          avatar_url: string | null
           bio: string
+          competency_tags: string[]
+          contact_email: string | null
+          contact_phone: string | null
           created_at: string
+          display_name: string | null
           headline: string
           id: string
           is_published: boolean
+          last_draft_commit_key: string | null
           slug: string
           theme_preset: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          avatar_url?: string | null
           bio?: string
+          competency_tags?: string[]
+          contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string
+          display_name?: string | null
           headline?: string
           id?: string
           is_published?: boolean
+          last_draft_commit_key?: string | null
           slug: string
           theme_preset?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          avatar_url?: string | null
           bio?: string
+          competency_tags?: string[]
+          contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string
+          display_name?: string | null
           headline?: string
           id?: string
           is_published?: boolean
+          last_draft_commit_key?: string | null
           slug?: string
           theme_preset?: string
           updated_at?: string
@@ -105,9 +225,11 @@ export type Database = {
       }
       project_items: {
         Row: {
+          star_card: Json | null
           created_at: string
           description: string
           id: string
+          is_draft_derived: boolean
           link_url: string | null
           profile_id: string
           sort_order: number
@@ -115,9 +237,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          star_card?: Json | null
           created_at?: string
           description?: string
           id?: string
+          is_draft_derived?: boolean
           link_url?: string | null
           profile_id: string
           sort_order?: number
@@ -125,9 +249,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          star_card?: Json | null
           created_at?: string
           description?: string
           id?: string
+          is_draft_derived?: boolean
           link_url?: string | null
           profile_id?: string
           sort_order?: number
@@ -312,14 +438,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_project_card_attempt: { Args: { p_ip_hash: string }; Returns: boolean }
       claim_resume_analysis_attempt: {
         Args: { p_ip_hash: string }
         Returns: boolean
+      }
+      commit_draft_to_profile: {
+        Args: {
+          p_draft_session_id: string
+          p_existing_profile_id: string
+          p_expected_content: Json
+          p_idempotency_key: string
+        }
+        Returns: Json
       }
       current_workshop_session_id: { Args: never; Returns: string }
       get_current_workshop_session: { Args: never; Returns: Json }
       join_workshop_session: { Args: { p_code: string }; Returns: Json }
       profile_owner_status: { Args: { p_profile_id: string }; Returns: string }
+      save_clay_recipe: {
+        Args: { p_id: string; p_items: Json; p_recipe: Json }
+        Returns: string
+      }
       verify_workshop_code: { Args: { p_code: string }; Returns: Json }
     }
     Enums: {

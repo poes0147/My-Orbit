@@ -1,8 +1,12 @@
 "use client";
 
+import ProjectCardEditor from "./project-card-editor";
+
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { editableTextSchema, savedDraftSchema, type EditableText, type SavedDraft } from "@/lib/builder/editable-draft";
+import StarObjectGuideViewer from "./star-object-guide-viewer";
+import PendingIndicator from "@/components/layouts/pending-indicator";
 
 const button = "min-h-11 rounded-xl border border-stone-300 px-3 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50";
 const fieldClass = "w-full rounded-xl border border-stone-300 bg-white px-3 py-3 text-base outline-none focus:border-amber-700 focus:ring-2 focus:ring-amber-700/20";
@@ -46,7 +50,7 @@ function EditableBlock({ label, value, original, max, multiline, field, onChange
         <input autoFocus aria-label={`${label} 편집`} maxLength={max} className={fieldClass} value={text} onChange={e => setText(e.target.value)} onBlur={e => { if (!container.current?.contains(e.relatedTarget)) commit(); }} onKeyDown={e => { if (e.nativeEvent.isComposing) return; if (e.key === "Enter") { e.preventDefault(); commit(); } if (e.key === "Escape") { setEditing(false); onPending(false); } }} />}
       <p className="text-xs text-stone-500">{text.length} / {max}자</p>
       <div className="flex gap-2"><button type="button" className={button} onClick={commit}>확인</button><button type="button" className={button} onClick={() => { setEditing(false); onPending(false); }}>취소</button></div>
-    </div> : <button type="button" disabled={busy} aria-label={`${label} 직접 수정`} className={`${fieldClass} min-h-11 whitespace-pre-wrap break-words text-left leading-7 hover:border-amber-700 ${busy ? "motion-safe:animate-pulse" : ""}`} onClick={() => { setText(value); setEditing(true); setProposal(null); setError(""); onPending(true); }}>{value}</button>}
+    </div> : <button type="button" disabled={busy} aria-label={`${label} 직접 수정`} className={`${fieldClass} min-h-11 whitespace-pre-wrap break-words text-left leading-7 enabled:hover:border-amber-700 ${busy ? "motion-safe:animate-pulse" : ""}`} onClick={() => { setText(value); setEditing(true); setProposal(null); setError(""); onPending(true); }}>{value}</button>}
     {!editing && <div className="flex flex-wrap items-center gap-2">
       <button type="button" disabled={busy || value.length < 4} className={button} onClick={() => void rewrite("shorten")}>{busy ? "다듬는 중…" : "더 짧게"}</button>
       <select disabled={busy} aria-label={`${label} 변경할 말투`} className={`${button} max-w-full bg-white`} value={tone} onChange={e => setTone(e.target.value)}><option value="professional">전문적으로</option><option value="bold">도전적으로</option><option value="approachable">친근하게</option></select>
@@ -89,6 +93,10 @@ function DraftEditor({ draft, onEditingChange }: { draft: SavedDraft; onEditingC
   function update(patch: Partial<EditableText>) { setCurrent(value => ({ ...value, ...patch })); setMessage(""); setFailed(false); }
   async function save() {
     if (blocked || !dirty) return;
+    if (!editableTextSchema.safeParse(current).success) {
+      setMessage("카드의 세 문장과 링크를 확인해 주세요.");
+      return;
+    }
     setBusy(true); setMessage(""); setFailed(false);
     const snapshot = current;
     try {
@@ -102,12 +110,13 @@ function DraftEditor({ draft, onEditingChange }: { draft: SavedDraft; onEditingC
   }
   const blockProps = (key: string) => ({ onPending: (value: boolean) => setPending(previous => ({ ...previous, [key]: value })) });
   return <div className="space-y-5">
+    {busy && <PendingIndicator message="수정한 초안을 저장하고 있어요." overlay />}
     <div className={`space-y-5 ${busy ? "pointer-events-none opacity-60" : ""}`} inert={busy}>
       <EditableBlock label="한 줄 소개" field="title" max={60} value={current.headline} original={draft.original.headline} onChange={headline => update({ headline })} {...blockProps("headline")} />
       <div className="grid min-w-0 gap-5 lg:grid-cols-3">{current.competency_tags.map((value, index) => <EditableBlock key={index} label={`핵심 역량 ${index + 1}`} field="skill_tag" max={20} value={value} original={draft.original.competency_tags[index]} onChange={tag => update({ competency_tags: current.competency_tags.map((item, i) => i === index ? tag : item) })} {...blockProps(`tag${index}`)} />)}</div>
-      <EditableBlock label="프로젝트 요약" field="project_summary" multiline max={300} value={current.project_summary} original={draft.original.project_summary} onChange={project_summary => update({ project_summary })} {...blockProps("summary")} />
+      {current.project_card ? <ProjectCardEditor card={current.project_card} disabled={busy} onChange={project_card => update({ project_card })} /> : <EditableBlock label="프로젝트 요약" field="project_summary" multiline max={300} value={current.project_summary} original={draft.original.project_summary} onChange={project_summary => update({ project_summary })} {...blockProps("summary")} />}
     </div>
-    {draft.objectGuide && <details className="rounded-xl border border-stone-200 bg-white px-4"><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">나의 별 조형 가이드 보기</summary><dl className="grid gap-4 pb-4 text-sm sm:grid-cols-2">{[["주조색", draft.objectGuide.primary_color], ["보조색", draft.objectGuide.secondary_color], ["배합", draft.objectGuide.color_ratio], ["형태 메타포", draft.objectGuide.shape_metaphor]].map(([label, value]) => <div key={label}><dt className="text-stone-500">{label}</dt><dd className="mt-1 break-words">{value}</dd></div>)}</dl></details>}
+    {draft.objectGuide && <StarObjectGuideViewer guide={draft.objectGuide} />}
     <div className="flex flex-wrap items-center gap-3"><button type="button" disabled={blocked || !dirty} className={`${button} bg-stone-900 text-white`} onClick={() => void save()}>{busy ? "저장 중…" : "수정한 초안 저장"}</button><p className="text-sm text-stone-600">{dirty ? "저장하지 않은 수정 내용이 있어요." : "계정에 저장된 초안이에요."}</p></div>
     {dirty || blocked ? <p className="text-sm text-stone-600">편집을 마치고 저장하면 미리볼 수 있어요.</p> :
       <form action="/builder/preview" method="get"><button type="submit" className={button}>미리보기</button></form>}

@@ -1,11 +1,22 @@
 import Link from "next/link";
+import { io } from "next/cache";
 import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
 import ProfileEditor from "@/components/profiles/profile-editor";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export default async function EditProfilePage({ params }: { params: Promise<{ profileId: string }> }) {
+export default function EditProfilePage({ params }: { params: Promise<{ profileId: string }> }) {
+  return (
+    <Suspense fallback={<p role="status">프로필을 불러오고 있어요.</p>}>
+      <EditableProfile params={params} />
+    </Suspense>
+  );
+}
+
+async function EditableProfile({ params }: { params: Promise<{ profileId: string }> }) {
   const { profileId } = await params;
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(profileId)) notFound();
+  await io();
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
@@ -25,9 +36,10 @@ export default async function EditProfilePage({ params }: { params: Promise<{ pr
   }
 
   const { data: profile, error } = await supabase.from("profiles")
-    .select("id,slug,headline,bio,theme_preset,is_published")
+    .select("id,slug,headline,bio,competency_tags,theme_preset,is_published,project_items(id,title,description,is_draft_derived,star_card,link_url)")
     .eq("id", profileId).eq("user_id", user.id).maybeSingle();
   if (error) throw new Error("프로필을 불러오지 못했습니다.");
   if (!profile) notFound();
-  return <ProfileEditor profile={profile} />;
+  const { project_items, ...editableProfile } = profile;
+  return <ProfileEditor profile={editableProfile} representativeProject={project_items.find(project => project.is_draft_derived)} />;
 }
