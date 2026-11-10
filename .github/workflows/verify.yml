@@ -28,6 +28,7 @@ jobs:
       - run: node scripts/test-builder-rate-limit.mjs
       - run: node scripts/test-workshop-code.mjs
       - run: node scripts/test-resume-analysis.mjs
+      - run: node --test scripts/test-database.mjs
       - run: npm run build -- --webpack
       - name: Check client bundle for server credentials
         run: |

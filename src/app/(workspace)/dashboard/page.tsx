@@ -19,7 +19,7 @@ export default async function DashboardPage() {
     ? "확인할 수 없음"
     : profile?.is_published ? "공개 중" : profile ? "비공개 저장됨" : draftHeadline ? "초안 저장됨" : summary.draftUnavailable ? "확인할 수 없음" : "프로필 없음";
   const journey = [
-    { title: "경험을 정리해요", detail: summary.interviewUnavailable ? "인터뷰 기록을 불러오지 못했어요." : summary.interview ? "저장된 인터뷰 기록의 상태예요." : "인터뷰 응답의 저장 기능은 아직 연결되지 않았어요.", status: interviewStatus },
+    { title: "경험을 정리해요", detail: summary.interviewUnavailable ? "인터뷰 기록을 불러오지 못했어요." : summary.interview ? "저장된 인터뷰 기록의 상태예요." : "아직 저장된 인터뷰 기록이 없어요. 경험을 입력하며 시작해 보세요.", status: interviewStatus },
     { title: "프로필을 다듬어요", detail: summary.profileUnavailable ? "프로필을 불러오지 못했어요. 잠시 후 다시 확인해 주세요." : profile ? profile.headline || "한 줄 소개를 작성해 주세요." : "프로필을 만들면 이곳에서 발행 상태를 확인할 수 있어요.", status: profileStatus },
     { title: "나의 별을 연결해요", detail: "연결한 오브제와 연결 대상을 아래에서 확인할 수 있어요.", status: "오브제" },
   ];
@@ -36,7 +36,7 @@ export default async function DashboardPage() {
         <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-14 size-48 rounded-full border border-amber-200/20" />
         <div aria-hidden="true" className="pointer-events-none absolute -right-2 -top-6 size-32 rounded-full border border-amber-200/20" />
         <div className="relative max-w-xs">
-          <p className="text-sm text-stone-300">{hasWorkshop ? "워크숍 참여 중" : "먼저 워크숍에 참여해요"}</p>
+          <p className="text-sm text-stone-300">{hasWorkshop ? "워크숍 참여 중" : profile || draftHeadline ? "저장한 이야기를 이어가요" : "먼저 워크숍에 참여해요"}</p>
           <h2 id="next-action-title" className="mt-3 text-2xl font-semibold leading-snug">
             {profile || draftHeadline ? "내 프로필을 다듬어볼까요?" : hasWorkshop ? "나만의 프로필 만들기를 시작해볼까요?" : "참여 코드를 입력하면 프로필 작성을 시작할 수 있어요."}
           </h2>

@@ -22,11 +22,17 @@ type Profile = {
 
 type RepresentativeProject = { id: string; title: string; description: string; star_card: Json | null; link_url: string | null };
 
+function editableContent(profile: Profile) {
+  return JSON.stringify([profile.slug, profile.display_name ?? "", profile.headline, profile.bio,
+    profile.competency_tags.map(tag => tag.trim()).filter(Boolean)]);
+}
+
 export default function ProfileEditor({ profile: initialProfile, representativeProject, avatarUrl }: {
   profile: Profile; representativeProject?: RepresentativeProject; avatarUrl: string | null;
 }) {
   const [profile, setProfile] = useState(initialProfile);
   const [savedSlug, setSavedSlug] = useState(initialProfile.slug);
+  const [savedContent, setSavedContent] = useState(() => editableContent(initialProfile));
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -47,7 +53,8 @@ export default function ProfileEditor({ profile: initialProfile, representativeP
       }
       setProfile(previous => ({ ...result.profile, theme_preset: previous.theme_preset }));
       setSavedSlug(result.profile.slug);
-      setMessage("저장했어요.");
+      setSavedContent(editableContent(result.profile));
+      setMessage(result.profile.is_published ? "저장했어요. 공개 프로필에도 반영됐어요." : "비공개로 저장했어요. 본인만 볼 수 있어요.");
     } catch {
       setMessage("연결을 확인한 뒤 다시 시도해 주세요.");
     } finally {
@@ -63,12 +70,13 @@ export default function ProfileEditor({ profile: initialProfile, representativeP
       <h1 className="mt-2 text-3xl font-semibold tracking-tight">내 프로필 편집</h1>
       <p className="mt-2 text-sm text-stone-600">소개 문구와 핵심 역량을 수정할 수 있어요.</p>
     </header>
-    <ProfilePublication published={profile.is_published} slug={savedSlug} disabled={saving}
+    <ProfilePublication published={profile.is_published} slug={savedSlug} disabled={saving} hasUnsavedChanges={editableContent(profile) !== savedContent}
       onChange={(is_published, slug) => {
         setSavedSlug(slug);
         setProfile(previous => ({ ...previous, is_published }));
       }} />
     <form onSubmit={save} className="space-y-6 rounded-3xl border border-stone-200 bg-white p-5 sm:p-8">
+      <fieldset disabled={saving} className="space-y-6">
       <label className="block text-sm font-medium">공개 이름
         <input className={fieldClass} value={profile.display_name ?? ""} maxLength={120}
           onChange={event => setProfile({ ...profile, display_name: event.target.value })} />
@@ -97,6 +105,7 @@ export default function ProfileEditor({ profile: initialProfile, representativeP
       <div className="flex flex-wrap items-center gap-3">
         <button type="submit" disabled={saving} className="min-h-12 rounded-xl bg-stone-900 px-6 text-sm font-semibold text-white disabled:opacity-50">{saving ? "저장 중…" : "변경사항 저장"}</button>
       </div>
+      </fieldset>
     </form>
     <ThemeSelector savedTheme={profile.theme_preset} fullName={profile.display_name?.trim() || profile.slug}
       avatarUrl={avatarUrl} headline={profile.headline} tags={profile.competency_tags} bio={profile.bio}
