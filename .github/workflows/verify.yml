@@ -23,6 +23,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      - run: node --test scripts/test-admin-access.mjs
       - run: node --test scripts/test-title-tags.mjs scripts/test-project-card.mjs scripts/test-profile-header.mjs scripts/test-profile-themes.mjs scripts/test-nfc-routing.mjs src/modules/public-profile/vcard.test.mjs
       - run: node scripts/test-builder-draft.mjs
       - run: node scripts/test-builder-rate-limit.mjs
