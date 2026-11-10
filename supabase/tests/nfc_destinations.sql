@@ -21,10 +21,7 @@ begin
   if (select result_code from public.bind_nfc_tag(current_setting('orbit.nfc_tag'), current_setting('orbit.nfc_claim'), repeat('1', 64))) is distinct from 'SUCCESS' then
     raise exception 'Initial binding failed';
   end if;
-  update public.nfc_tags set target_type = 'custom_url', custom_url = 'https://example.com/work?q=1#demo'
-  where tag_id = current_setting('orbit.nfc_tag');
-  get diagnostics changed = row_count;
-  if changed <> 1 then raise exception 'Owner destination update denied'; end if;
+  if not public.set_nfc_destination(current_setting('orbit.nfc_tag'),'custom_url','https://example.com/work?q=1#demo',null,null,true) then raise exception 'Owner destination update denied'; end if;
   begin
     perform claim_code_hash from public.nfc_tags;
     raise exception 'Owner can read claim code hashes';
@@ -38,7 +35,7 @@ begin
     'https://example.com' || chr(92) || '@bad.com', null]
   loop
     begin
-      update public.nfc_tags set custom_url = invalid_url where tag_id = current_setting('orbit.nfc_tag');
+      perform public.set_nfc_destination(current_setting('orbit.nfc_tag'),'custom_url',invalid_url,null,null,true);
       raise exception 'Unsafe destination accepted';
     exception when check_violation then null; end;
   end loop;
@@ -64,10 +61,7 @@ do $$ declare changed integer; begin
   if exists (select 1 from public.nfc_tags where tag_id = current_setting('orbit.nfc_tag')) then
     raise exception 'Another account can list the tag';
   end if;
-  update public.nfc_tags set target_type = 'profile', custom_url = null
-  where tag_id = current_setting('orbit.nfc_tag');
-  get diagnostics changed = row_count;
-  if changed <> 0 then raise exception 'Another account modified the tag'; end if;
+  if public.set_nfc_destination(current_setting('orbit.nfc_tag'),'profile') then raise exception 'Another account modified the tag'; end if;
 end $$;
 
 reset role;
@@ -78,12 +72,12 @@ do $$ begin
   if (select tag_status from public.resolve_nfc_tag(current_setting('orbit.nfc_tag'))) is distinct from 'external' then
     raise exception 'Private profile broke an explicitly configured external link';
   end if;
-  update public.nfc_tags set target_type = 'profile', custom_url = null
-  where tag_id = current_setting('orbit.nfc_tag');
-  if (select tag_status from public.resolve_nfc_tag(current_setting('orbit.nfc_tag'))) is distinct from 'unavailable' then
-    raise exception 'Private profile routing leaked';
-  end if;
+  begin
+    perform public.set_nfc_destination(current_setting('orbit.nfc_tag'),'profile');
+    raise exception 'Private profile selected';
+  exception when invalid_parameter_value then null; end;
   update public.profiles set is_published = true where user_id = auth.uid();
+  perform public.set_nfc_destination(current_setting('orbit.nfc_tag'),'profile');
   if (select public_slug from public.resolve_nfc_tag(current_setting('orbit.nfc_tag')))
     is distinct from ('nfc-fixture-' || current_setting('orbit.nfc_owner')) then
     raise exception 'Public profile routing was not restored';

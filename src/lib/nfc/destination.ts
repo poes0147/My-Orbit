@@ -24,17 +24,24 @@ export const externalDestinationSchema = z.string().trim().max(500)
     return z.NEVER;
   });
 
+const common = { alias: z.string().trim().max(40).regex(/^[^\x00-\x1f\x7f]*$/).nullable().optional(), acknowledged: z.boolean().optional() };
 export const tagDestinationInputSchema = z.discriminatedUnion("target_type", [
-  z.object({ target_type: z.literal("profile"), custom_url: z.null().optional() }).strict(),
-  z.object({ target_type: z.literal("custom_url"), custom_url: externalDestinationSchema }).strict(),
+  z.object({ ...common, target_type: z.literal("profile"), custom_url: z.null().optional() }).strict(),
+  z.object({ ...common, target_type: z.literal("custom_url"), custom_url: externalDestinationSchema, acknowledged: z.literal(true) }).strict(),
+  z.object({ ...common, target_type: z.literal("contact_card"), card_id: z.uuid(), acknowledged: z.literal(true) }).strict(),
+  z.object({ ...common, target_type: z.literal("none") }).strict(),
 ]);
 
-export const tagDestinationFields = "tag_id,is_active,target_type,custom_url,updated_at";
+export const tagDestinationFields = "tag_id,is_active,target_type,custom_url,card_id,alias,updated_at";
 
 export const tagDestinationSchema = z.object({
   tag_id: z.string(),
   is_active: z.boolean(),
   updated_at: z.string(),
-}).and(tagDestinationInputSchema.options[0].strip().required().or(tagDestinationInputSchema.options[1].strip()));
+  alias: z.string().nullable(),
+  card_id: z.uuid().nullable(),
+  custom_url: z.string().nullable(),
+  target_type: z.enum(["profile", "custom_url", "contact_card", "none"]),
+});
 
 export type TagDestination = z.output<typeof tagDestinationSchema>;

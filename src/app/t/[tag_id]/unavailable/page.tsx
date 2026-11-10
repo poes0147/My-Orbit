@@ -14,9 +14,11 @@ export default function UnavailableTagPage({ searchParams }: { searchParams: Pro
 }
 
 async function Notice({ searchParams }: { searchParams: Promise<{ reason?: string | string[] }> }) {
-  const isPrivate = (await searchParams).reason === "private";
+  const reason = (await searchParams).reason;
+  const isPrivate = reason === "private";
+  const isPaused = reason === "paused";
   return <>
-    <h1 className="mt-3 text-2xl font-semibold">{isPrivate ? "현재 비공개 상태인 프로필이에요" : "오브제를 열 수 없어요"}</h1>
-    <p className="mt-3 leading-7 text-stone-700">{isPrivate ? "소유자가 프로필을 다시 공개하면 같은 태그와 QR로 볼 수 있어요." : "사용할 수 없는 태그예요. 오브제에 적힌 QR 주소를 확인해 주세요."}</p>
+    <h1 className="mt-3 text-2xl font-semibold">{isPaused ? "연결이 잠시 중지된 오브제예요" : isPrivate ? "현재 비공개 상태인 프로필이에요" : "오브제를 열 수 없어요"}</h1>
+    <p className="mt-3 leading-7 text-stone-700">{isPaused ? "소유자가 연결 대상을 선택하면 같은 태그와 QR로 다시 이용할 수 있어요." : isPrivate ? "소유자가 프로필을 다시 공개하면 같은 태그와 QR로 볼 수 있어요." : "사용할 수 없는 태그예요. 오브제에 적힌 QR 주소를 확인해 주세요."}</p>
   </>;
 }

@@ -1,0 +1,80 @@
+import assert from "node:assert/strict";
+
+// Start nfc-ui-server.mjs fresh. This uses real application handlers and isolated
+// PostgreSQL; only authenticated identity / Supabase HTTP transport are fixtures.
+export async function verifyNfcUI(page) {
+  const origin = "http://localhost:3106";
+  const { issued } = await (await page.request.get(origin + "/fixture-state")).json();
+  const tagUrl = origin + "/t/" + issued.tag_id;
+  await page.goto(origin + "/tags/bind/" + issued.tag_id);
+  await page.getByRole("textbox", { name: "일회용 등록 코드" }).fill(issued.registration_code);
+  await page.getByRole("button", { name: "내 오브제로 등록하기" }).click();
+  await page.getByRole("status").filter({ hasText: "내 오브제로 등록했어요" }).waitFor();
+  await page.goto(origin + "/dashboard/cards");
+  await page.getByRole("button", { name: "새 명함 만들기" }).click();
+  await page.getByLabel("관리용 명함 이름").fill("회사 명함");
+  await page.getByLabel("공개 이름", { exact: true }).fill("김오빗");
+  await page.getByLabel("전화번호", { exact: true }).fill("010-1234-5678");
+  await page.getByLabel("회사·단체", { exact: true }).fill("My Orbit");
+  await page.getByRole("button", { name: "명함 저장", exact: true }).click();
+  await page.getByRole("heading", { name: "회사 명함", exact: true }).waitFor();
+  await page.goto(origin + "/dashboard");
+  await page.getByRole("button", { name: "연결 대상 변경" }).click();
+  assert.equal(await page.getByRole("radio", { name: "내 My Orbit 프로필" }).isDisabled(), true);
+  await page.getByLabel("오브제 이름").fill("회사 운석");
+  await page.getByRole("radio", { name: "내 명함 바로 연결" }).check();
+  await page.getByLabel("연결할 명함").selectOption({ label: "회사 명함" });
+  assert.equal(await page.getByRole("button", { name: "저장하기", exact: true }).isDisabled(), true);
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "저장하기", exact: true }).click();
+  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await page.reload();
+  await page.getByText("회사 운석", { exact: true }).waitFor();
+  const response = await page.request.get(tagUrl + "/contact");
+  assert.equal(response.status(), 200);
+  assert.match(response.headers()["cache-control"], /no-store/);
+  assert.match(await response.text(), /FN:김오빗/);
+  assert.doesNotMatch(await response.text(), /회사 명함|URL:/);
+  for (const width of [1280,375,320]) {
+    await page.setViewportSize({ width, height: 850 });
+    await page.getByRole("button", { name: "연결 대상 변경" }).click();
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth || document.querySelector("dialog").scrollWidth > document.querySelector("dialog").clientWidth),false);
+    if (width === 375) await page.screenshot({ path: "D:/modu/my-orbit-workshop/docs/reviews/assets/nfc-contact-mobile.png", fullPage: true });
+    await page.getByRole("button", { name: "취소", exact: true }).click();
+  }
+  await page.setViewportSize({ width:1280,height:850 });
+  await page.screenshot({ path:"D:/modu/my-orbit-workshop/docs/reviews/assets/nfc-objects-desktop.png",fullPage:true });
+  await page.goto(origin + "/dashboard/cards");
+  await page.getByRole("button", { name: "명함 편집", exact: true }).click();
+  await page.getByLabel("공개 이름", { exact: true }).fill("김오빗 수정");
+  await page.getByRole("button", { name: "명함 저장", exact: true }).click();
+  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await page.reload();
+  await page.getByText("김오빗 수정", { exact: true }).waitFor();
+  assert.match(await (await page.request.get(tagUrl + "/contact")).text(), /FN:김오빗 수정/);
+  await page.getByRole("button", { name: "새 명함 만들기" }).click();
+  assert.equal(await page.getByLabel("공개 이름", { exact: true }).inputValue(), "");
+  await page.getByRole("button", { name: "취소", exact: true }).click();
+  await page.goto(origin + "/dashboard");
+  await page.getByRole("button", { name: "연결 대상 변경" }).click();
+  await page.getByRole("radio", { name: "외부 HTTPS 링크" }).check();
+  await page.getByLabel("외부 링크 주소").fill("https://instagram.com/myorbit");
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "저장하기", exact: true }).click();
+  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  assert.equal((await page.request.get(tagUrl + "/contact")).status(),404);
+  assert.equal((await page.request.get(tagUrl,{maxRedirects:0})).headers().location,"https://instagram.com/myorbit");
+  await page.getByRole("button", { name: "연결 대상 변경" }).click();
+  await page.getByRole("radio", { name: "내 명함 바로 연결" }).check();
+  await page.getByLabel("연결할 명함").selectOption({ label: "회사 명함" });
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "저장하기", exact: true }).click();
+  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await page.goto(origin + "/dashboard/cards");
+  page.once("dialog", dialog => dialog.accept());
+  await page.getByRole("button", { name: "삭제", exact: true }).click();
+  await page.getByRole("status").filter({hasText:"명함을 삭제하고"}).waitFor();
+  assert.equal((await page.request.get(tagUrl + "/contact")).status(),404);
+  assert.match((await page.request.get(tagUrl,{maxRedirects:0})).headers().location,/reason=paused/);
+  return "PASS: profileless claim, private card CRUD, acknowledgement, vCard, persistence, URL switching, delete/pause, 1280/375/320px";
+}
