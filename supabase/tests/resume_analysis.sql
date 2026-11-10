@@ -36,7 +36,7 @@ begin
   values('b6735987-30df-4846-bc57-66237effcf01','other.txt','text/plain',100,'text','{}');
   raise exception 'Cross-owner insert allowed';
  exception when insufficient_privilege then null; end;
- if public.claim_resume_analysis_attempt(repeat('a',64)) then raise exception 'Shared IP quota bypassed'; end if;
+ if not public.claim_resume_analysis_attempt(repeat('a',64)) then raise exception 'Another participant on shared WiFi rejected'; end if;
  if not public.claim_resume_analysis_attempt(repeat('b',64)) then raise exception 'Independent quota rejected'; end if;
 end $$;
 reset role;

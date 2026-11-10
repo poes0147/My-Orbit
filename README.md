@@ -15,7 +15,7 @@ npm install
 npm run dev
 ```
 
-개발 서버는 [http://localhost:3000](http://localhost:3000)에서 확인합니다. `.env.example`을 `.env.local`로 복사하고 Supabase Connect에서 받은 프로젝트 URL과 Publishable key를 입력합니다. 실제 값이 들어 있는 `.env.local`은 Git에 올리지 않습니다. Supabase 공식 클라이언트 패키지를 설치했으며 개발 프로젝트의 인증 설정 API 응답을 확인했습니다. 앱의 소셜 로그인·세션 연결은 진행 중입니다.
+개발 서버는 [http://localhost:3000](http://localhost:3000)에서 확인합니다. `.env.example`을 `.env.local`로 복사하고 Supabase Connect에서 받은 프로젝트 URL과 Publishable key를 입력합니다. 실제 값이 들어 있는 `.env.local`은 Git에 올리지 않습니다. 소셜 로그인은 Supabase OAuth와 서버 세션 쿠키를 사용합니다. 실제 AI 생성에는 서버 전용 API 키도 필요합니다.
 
 | 명령 | 내용 |
 |---|---|
@@ -23,14 +23,15 @@ npm run dev
 | `npm run lint` | ESLint 검사 |
 | `npm run build` | Next.js 프로덕션 빌드 |
 | `npm run start` | 빌드 결과 실행 |
+| `node --test scripts/test-database.mjs` | 외부 DB 접속 없이 마이그레이션·RLS·저장·공개·공동 와이파이 제한 검증 |
 
 ## 현재 상태
 
-Google/Kakao 로그인, 회원 DB 및 워크숍 참여 연결이 있습니다. 2026-11-03 로컬 보정에서 관리자 전용 코드 발급·전체 관리, PC 사이드바·모바일 탭, 실제 워크숍 헤더, 위저드 임시 저장 복원을 구현했습니다. 입력 초안은 계정·워크숍별로 이 탭의 sessionStorage에 저장하며 로그아웃 시 제거합니다. 비공개 AI 초안 생성·저장·수정 및 이력서 분석 기반 입력 자동 채우기는 로컬과 개발 DB에서 연결을 확인했습니다. 이력서 기능의 배포·권한 검증 잔여 항목은 아래 전용 문서를 참고하세요.
+Google·Kakao 로그인, 관리자 워크숍 코드 관리, 이력서 PDF·텍스트 분석, AI 초안 생성·편집, 비공개 프로필 저장, 공개·해제, ‘나의 별’ 클레이 가이드, NFC 최초 연결·목적지 변경이 구현되어 있습니다. 조회수 집계와 맞춤 후속 질문은 아직 구현하지 않았습니다.
 
-실제 로그인 계정으로 로컬 관리자 발급 → 코드 확인 → 빌더 진입 → 입력 새로고침 복원 → 세션 종료 → 재입장 차단을 검증했습니다. 대시보드의 실제 프로필 발행·NFC·조회수 집계는 해당 테이블과 기능이 없어 진행 중입니다. 상세 결과와 미완료 항목은 [스택 재점검 기록](./docs/reviews/2026-11-03-stack-audit.md)을 참고하세요. 이번 변경은 별도 작업 폴더 `D:\modu\my-orbit-workshop`의 미커밋 상태이며 Vercel에는 아직 반영되지 않았습니다.
+초안 저장은 프로필 반영·공개와 별개입니다. 미리보기에서 **내 프로필로 저장**하면 비공개 프로필로 반영하고, 대시보드에서 다시 편집할 수 있습니다. 다른 사람이 보려면 프로필 편집 화면에서 **공개 발행하기**를 선택합니다. 공개 중인 프로필을 수정해 저장하면 공개 페이지에도 반영됩니다. 초안으로 교체하려면 먼저 공개를 해제합니다.
 
-Supabase Google·Kakao 제공자와 웹 로그인 버튼을 활성화했습니다. Google 로그인·로그아웃·재로그인과 Kakao 로그인·로그아웃은 사용자 확인을 받았고, 실제 DB 회원 등록도 확인했습니다. Kakao 재로그인과 장시간 세션 유지·갱신 검증은 남아 있습니다. 로그인은 서버 PKCE와 HttpOnly 쿠키로 처리하고 보호된 화면은 Next.js Proxy에서 사용자 신원을 확인합니다. 회원용 `public.users` 생성·자동 등록·기존 회원 보충·RLS를 개발 DB에 적용하고 실제 Postgres에서 권한 격리를 검증했습니다. 웹 배포 연결은 별도 작업입니다. 완료된 기능은 실제 동작과 인수 조건을 확인한 뒤에만 완료로 표시합니다.
+배포 주소는 [my-orbit-web.vercel.app](https://my-orbit-web.vercel.app)입니다. 코드 병합, 웹 배포, DB 적용 상태는 각각 확인합니다. 개발·운영은 현재 하나의 Supabase 프로젝트를 공유하므로 회귀 테스트는 별도 메모리 DB에서 수행합니다. 최신 검증 범위와 남은 실기기 확인은 [2026-11-10 보완 기록](./docs/reviews/2026-11-10-launch-hardening.md)을 참고하세요.
 
 ## 주요 경로
 
@@ -47,7 +48,7 @@ Supabase Google·Kakao 제공자와 웹 로그인 버튼을 활성화했습니�
 | `/admin/workshops` | 관리자 전용 코드 발급·전체 조회·참여 종료 |
 | `/admin/sessions` | 관리자 화면 별칭 |
 
-위 경로 중 일부는 현재 화면 골격만 있습니다. 실제 라우트와 기능 상태는 코드를 기준으로 확인하세요.
+`/builder/preview`는 저장된 초안 미리보기, `/profiles/{profile_id}/edit`는 저장된 프로필 편집, `/admin/clay-materials`는 관리자 재료·배합 관리 화면입니다.
 
 ### 개발용 NFC 태그 발급
 
