@@ -29,22 +29,15 @@ async function LoginContent({ searchParams }: Pick<PageProps<"/login">, "searchP
         </div>
 
         <div className="mt-8 space-y-3">
-          <form action="/api/auth/signin" method="get">
-          <input type="hidden" name="provider" value="google" />
-          <input type="hidden" name="next" value={next} />
-          <button type="submit" className="flex min-h-14 w-full items-center justify-center gap-3 rounded-2xl border border-stone-200 bg-white px-4 text-sm font-semibold text-stone-900 hover:bg-stone-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">
+          {/* OAuth needs full-page navigation: form redirects are blocked by form-action 'self'. */}
+          <a href={`/api/auth/signin?provider=google&next=${encodeURIComponent(next)}`} className="flex min-h-14 w-full items-center justify-center gap-3 rounded-2xl border border-stone-200 bg-white px-4 text-sm font-semibold text-stone-900 hover:bg-stone-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">
             <span aria-hidden="true" className="grid size-7 place-items-center rounded-full border border-stone-200 text-base font-bold">G</span>
             Google로 계속하기
-          </button>
-          </form>
-          <form action="/api/auth/signin" method="get">
-          <input type="hidden" name="provider" value="kakao" />
-          <input type="hidden" name="next" value={next} />
-          <button type="submit" className="flex min-h-14 w-full items-center justify-center gap-3 rounded-2xl bg-[#FEE500] px-4 text-sm font-semibold text-stone-950 hover:bg-[#f5dc00] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">
+          </a>
+          <a href={`/api/auth/signin?provider=kakao&next=${encodeURIComponent(next)}`} className="flex min-h-14 w-full items-center justify-center gap-3 rounded-2xl bg-[#FEE500] px-4 text-sm font-semibold text-stone-950 hover:bg-[#f5dc00] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700">
             <span aria-hidden="true" className="grid size-7 place-items-center rounded-full bg-stone-900/10 text-xs font-bold">k</span>
             카카오로 계속하기
-          </button>
-          </form>
+          </a>
         </div>
 
         {hasError && <p role="alert" className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm leading-6 text-red-800">로그인을 완료하지 못했어요. 원하는 로그인 버튼을 눌러 다시 시도해 주세요.</p>}
