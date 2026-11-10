@@ -46,7 +46,7 @@ export default function TagBindingForm({ tagId }: { tagId: string }) {
   }
 
   if (connected) return <div className="mt-5 space-y-4">
-    <p role="status" className="font-semibold">오브제를 연결했어요. 이제 태그나 QR을 열면 공개 프로필로 이동해요.</p>
+    <p role="status" className="font-semibold">내 오브제로 등록했어요. 대시보드에서 명함이나 링크를 선택해 주세요. 아직 공개된 연결 대상은 없어요.</p>
     <Link href="/dashboard" className={button}>대시보드로 이동</Link>
   </div>;
 
@@ -56,8 +56,8 @@ export default function TagBindingForm({ tagId }: { tagId: string }) {
         onChange={event => setCode(event.target.value)} disabled={pending || blocked}
         className="mt-2 block min-h-11 w-full min-w-0 rounded-xl border border-stone-500 px-3 font-mono text-base focus:outline-2 focus:outline-offset-2 focus:outline-amber-800" />
     </label>
-    <button type="submit" disabled={pending || blocked || !code.trim()} className={button}>내 공개 프로필에 연결하기</button>
-    {pending && <PendingIndicator message="오브제와 프로필을 연결하고 있어요." />}
+    <button type="submit" disabled={pending || blocked || !code.trim()} className={button}>내 오브제로 등록하기</button>
+    {pending && <PendingIndicator message="오브제를 등록하고 있어요." />}
     {error && <p role="alert" className="text-sm text-red-800">{error}</p>}
   </form>;
 }

@@ -18,7 +18,7 @@ function fold(line: string) {
 }
 
 export function createVCard(profile: {
-  name: string; headline: string; bio: string; email: string | null; phone: string | null; url: string;
+  name: string; headline?: string | null; bio?: string; email: string | null; phone: string | null; url?: string | null; organization?: string | null;
 }) {
   return [
     "BEGIN:VCARD",
@@ -28,7 +28,8 @@ export function createVCard(profile: {
     profile.headline && "TITLE:" + escapeText(profile.headline),
     profile.email && "EMAIL;TYPE=INTERNET:" + escapeText(profile.email),
     profile.phone && "TEL;TYPE=CELL:" + escapeText(profile.phone),
-    "URL:" + escapeText(profile.url),
+    profile.url && "URL:" + escapeText(profile.url),
+    profile.organization && "ORG:" + escapeText(profile.organization),
     profile.bio && "NOTE:" + escapeText(profile.bio),
     "END:VCARD",
   ].filter((line): line is string => Boolean(line)).map(fold).join("\r\n") + "\r\n";

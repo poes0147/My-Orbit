@@ -7,7 +7,7 @@ import { externalDestinationSchema } from "./destination";
 const resolutionSchema = z.discriminatedUnion("tag_status", [
   z.object({ tag_status: z.literal("published"), public_slug: z.string().max(80).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/) }),
   z.object({ tag_status: z.literal("external"), public_slug: z.null(), external_url: externalDestinationSchema }),
-  z.object({ tag_status: z.enum(["inactive", "unavailable", "unbound"]), public_slug: z.null() }),
+  z.object({ tag_status: z.enum(["inactive", "unavailable", "unbound", "contact", "paused"]), public_slug: z.null() }),
 ]);
 
 export async function resolveTag(tagId: string) {

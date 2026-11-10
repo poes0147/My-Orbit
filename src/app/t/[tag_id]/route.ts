@@ -26,6 +26,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ tag_
     if (!tag) return redirectTo(unavailable + "?reason=invalid");
     switch (tag.tag_status) {
       case "published": return redirectTo("/p/" + tag.public_slug);
+      case "contact": return redirectTo("/t/" + parsed.data + "/contact");
+      case "paused": return redirectTo(unavailable + "?reason=paused");
       case "external": {
         const url = new URL(tag.external_url);
         if (url.origin === new URL(request.url).origin && url.pathname.startsWith("/t/")) return redirectTo(unavailable + "?reason=invalid");
