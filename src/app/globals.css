@@ -37,6 +37,15 @@
 }
 
 @theme inline {
+  /* Admin shell reuses the workspace's stone/amber palette in named roles. */
+  --color-admin-canvas: var(--color-stone-50);
+  --color-admin-surface: var(--color-white);
+  --color-admin-text: var(--color-stone-950);
+  --color-admin-muted: var(--color-stone-600);
+  --color-admin-border: var(--color-stone-200);
+  --color-admin-accent: var(--color-amber-900);
+  --color-admin-selected: var(--color-amber-100);
+  --color-admin-hover: var(--color-stone-100);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);

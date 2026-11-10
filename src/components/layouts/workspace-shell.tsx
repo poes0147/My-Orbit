@@ -29,7 +29,7 @@ export default function WorkspaceShell({ context, children }: { context: Workspa
   const isSessionEntry = pathname === "/session";
   const [collapsed, setCollapsed] = useState(false);
   const online = useSyncExternalStore(subscribeOnline, () => navigator.onLine, () => true);
-  const items = context.role === "admin" ? [...nav, { href: "/admin/workshops", label: "코드 관리", icon: "▦" }] : nav;
+  const items = context.role === "admin" ? [...nav, { href: "/admin", label: "관리자 공간", icon: "▦" }] : nav;
   return <Context.Provider value={context}><div className="mx-auto flex min-h-dvh w-full max-w-6xl bg-white text-stone-950 shadow-sm">
     {!isSessionEntry && <aside aria-label="작업 공간 탐색" className={`sticky top-0 hidden h-dvh shrink-0 border-r border-stone-200 bg-stone-50 px-3 py-5 md:flex md:flex-col ${collapsed ? "w-20" : "w-56"}`}>
       <button onClick={() => setCollapsed(value => !value)} aria-label={collapsed ? "메뉴 펼치기" : "메뉴 접기"} aria-expanded={!collapsed} className="min-h-11 rounded-lg border border-stone-200 text-sm focus-visible:outline-2 focus-visible:outline-amber-700">{collapsed ? "☰" : "메뉴 접기"}</button>
@@ -40,6 +40,7 @@ export default function WorkspaceShell({ context, children }: { context: Workspa
         <Link href="/dashboard" className="font-semibold">My Orbit <span className="text-amber-700">✦</span></Link>
         <div className="flex min-w-0 items-center gap-2"><span title={context.workshop?.title} className={`${isSessionEntry ? "hidden sm:inline-flex" : ""} max-w-36 truncate rounded-full bg-amber-50 px-3 py-2 text-xs text-amber-900`}>{context.workshopUnavailable ? "워크숍 확인 불가" : context.workshop?.title ?? "세션 미참여"}</span><SignoutForm /></div>
       </header>
+      {context.role === "admin" && <div className="border-b border-stone-100 px-4 md:hidden"><Link href="/admin" className="flex min-h-11 items-center text-sm font-semibold text-amber-900">관리자 공간</Link></div>}
       {!online && <p role="alert" className="bg-amber-100 px-5 py-3 text-sm text-amber-950">인터넷 연결이 끊겼어요. 연결 후 다시 시도해 주세요.</p>}
       <main id="main-content" tabIndex={-1} className={isSessionEntry ? "session-entry-main min-w-0 px-5 py-8 sm:px-8 sm:py-12" : "min-w-0 px-4 py-7 md:px-8"}>{children}</main>
       {!isSessionEntry && <nav aria-label="모바일 주요 메뉴" className="sticky bottom-0 z-10 grid grid-cols-3 border-t border-stone-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">{nav.map(item => <Link key={item.href} href={item.href} aria-label={item.label} aria-current={pathname === item.href ? "page" : undefined} className={`relative flex min-h-14 items-center justify-center text-sm font-medium focus-visible:outline-2 focus-visible:outline-amber-700 ${pathname === item.href ? "bg-amber-50 text-amber-950" : "text-stone-600"}`}>{item.label}<MenuLoading /></Link>)}</nav>}
