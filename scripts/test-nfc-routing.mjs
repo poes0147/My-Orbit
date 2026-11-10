@@ -19,8 +19,8 @@ for (const url of ["", "http://example.com", "javascript:alert(1)", "https://loc
   assert.equal(externalDestinationSchema.safeParse(url).success, false, url);
 }
 assert.equal(tagDestinationInputSchema.safeParse({ target_type: "profile", custom_url: null }).success, true);
-assert.equal(tagDestinationSchema.safeParse({ tag_id: "READY", is_active: true, target_type: "profile", custom_url: null, updated_at: "now" }).success, true);
-assert.equal(tagDestinationSchema.safeParse({ tag_id: "READY", is_active: true, target_type: "custom_url", custom_url: "https://instagram.com/myorbit", updated_at: "now" }).success, true);
+assert.equal(tagDestinationSchema.safeParse({ tag_id: "READY", is_active: true, target_type: "profile", custom_url: null, updated_at: "now", alias: null, card_id: null }).success, true);
+assert.equal(tagDestinationSchema.safeParse({ tag_id: "READY", is_active: true, target_type: "custom_url", custom_url: "https://instagram.com/myorbit", updated_at: "now", alias: null, card_id: null }).success, true);
 
 const routePath = new URL("../src/app/t/[tag_id]/route.ts", import.meta.url);
 const source = ts.transpileModule(readFileSync(routePath, "utf8"), {
@@ -28,6 +28,8 @@ const source = ts.transpileModule(readFileSync(routePath, "utf8"), {
 }).outputText;
 const exports = {};
 const resolutions = new Map([
+  ["CONTACT", { tag_status: "contact", public_slug: null }],
+  ["PAUSED", { tag_status: "paused", public_slug: null }],
   ["READY", { tag_status: "published", public_slug: "orbit-fixture" }],
   ["UNBOUND", { tag_status: "unbound", public_slug: null }],
   ["INACTIVE", { tag_status: "inactive", public_slug: null }],
@@ -49,6 +51,8 @@ runInNewContext(source, {
 });
 const get = id => exports.GET(new Request("http://localhost/t/" + id), { params: Promise.resolve({ tag_id: id }) });
 for (const [id, status, location] of [
+  ["CONTACT", 302, "/t/CONTACT/contact"],
+  ["PAUSED", 302, "/t/PAUSED/unavailable?reason=paused"],
   ["READY", 302, "/p/orbit-fixture"],
   ["UNBOUND", 307, "/tags/bind/UNBOUND"],
   ["INACTIVE", 302, "/t/INACTIVE/unavailable?reason=invalid"],

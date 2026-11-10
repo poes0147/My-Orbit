@@ -20,3 +20,9 @@ test("creates a folded UTF-8 vCard without letting text create new properties", 
   assert.ok(unfolded.includes("\r\nURL:https://example.invalid/p/test\r\n"));
   assert.ok(unfolded.endsWith("\\nTEL:injected\r\nEND:VCARD\r\n"));
 });
+
+test("independent card omits profile URL and escapes organization", () => {
+  const card = createVCard({ name: "오빗", email: null, phone: "010-1234-5678", organization: "팀;오빗" });
+  assert.match(card, /ORG:팀\\;오빗/);
+  assert.doesNotMatch(card, /URL:|NOTE:|TITLE:|EMAIL:/);
+});

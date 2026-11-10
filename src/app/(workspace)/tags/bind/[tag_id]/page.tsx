@@ -1,11 +1,9 @@
-import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import TagBindingForm from "@/components/nfc/tag-binding-form";
 import { getWorkspaceContext } from "@/lib/auth/workspace-context";
 import { resolveTag } from "@/lib/nfc/resolve-tag";
 import { tagBindingPath, tagIdSchema } from "@/lib/nfc/tag";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const button = "inline-flex min-h-11 items-center justify-center rounded-xl bg-stone-900 px-4 text-sm font-semibold text-white hover:bg-stone-800";
 
@@ -33,24 +31,11 @@ async function TagBinding({ params }: { params: Promise<{ tag_id: string }> }) {
   if (tag.tag_status === "inactive") return <p className="mt-3">사용이 중단된 태그예요. 워크숍 운영진에게 문의해 주세요.</p>;
   if (tag.tag_status !== "unbound") return <p className="mt-3">이미 연결된 태그예요.</p>;
 
-  const context = await getWorkspaceContext();
-  const supabase = await createSupabaseServerClient();
-  const { data: profile, error } = await supabase.from("profiles")
-    .select("id,display_name,headline,is_published").eq("user_id", context.id).maybeSingle();
-  if (error) return <div className="mt-3 space-y-3">
-    <p role="alert">프로필을 확인하지 못했어요. 잠시 후 다시 시도해 주세요.</p>
-    <a href={tagBindingPath(tagId)} className={button}>다시 시도</a>
-  </div>;
-  if (!profile || !profile.is_published) return <div className="mt-3 space-y-3">
-    <p>프로필을 공개한 뒤 오브제와 연결할 수 있어요.</p>
-    <Link href={profile ? `/profiles/${profile.id}/edit` : "/dashboard"} className={button}>프로필 준비하기</Link>
-  </div>;
-
+  await getWorkspaceContext();
   return <>
-    <p className="mt-3 text-sm leading-6 text-stone-700">오브제와 별도로 받은 등록 코드를 입력하면 아래 공개 프로필에 연결돼요.</p>
+    <p className="mt-3 text-sm leading-6 text-stone-700">오브제와 별도로 받은 등록 코드를 입력하면 내 계정에 등록돼요. 프로필을 만들거나 공개할 필요는 없어요.</p>
     <dl className="mt-4 space-y-2 rounded-xl bg-stone-50 p-4 text-sm">
       <dt className="font-semibold">태그 ID</dt><dd className="font-mono">{tagId}</dd>
-      <dt className="font-semibold">연결할 프로필</dt><dd>{profile.display_name} · {profile.headline}</dd>
     </dl>
     <TagBindingForm tagId={tagId} />
   </>;

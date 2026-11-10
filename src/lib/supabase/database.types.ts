@@ -161,6 +161,12 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_cards: {
+        Row: { id: string; user_id: string; card_name: string; display_name: string; phone_number: string | null; email: string | null; organization_name: string | null; job_title: string | null; website_url: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; user_id: string; card_name: string; display_name: string; phone_number?: string | null; email?: string | null; organization_name?: string | null; job_title?: string | null; website_url?: string | null; created_at?: string; updated_at?: string }
+        Update: { id?: string; user_id?: string; card_name?: string; display_name?: string; phone_number?: string | null; email?: string | null; organization_name?: string | null; job_title?: string | null; website_url?: string | null; created_at?: string; updated_at?: string }
+        Relationships: []
+      }
       nfc_tags: {
         Row: {
           claim_code_hash: string | null
@@ -169,6 +175,9 @@ export type Database = {
           is_active: boolean
           mapped_at: string | null
           profile_id: string | null
+          owner_id: string | null
+          card_id: string | null
+          alias: string | null
           tag_id: string
           target_type: Database["public"]["Enums"]["nfc_target_type"]
           updated_at: string
@@ -180,6 +189,9 @@ export type Database = {
           is_active?: boolean
           mapped_at?: string | null
           profile_id?: string | null
+          owner_id?: string | null
+          card_id?: string | null
+          alias?: string | null
           tag_id: string
           target_type?: Database["public"]["Enums"]["nfc_target_type"]
           updated_at?: string
@@ -191,11 +203,21 @@ export type Database = {
           is_active?: boolean
           mapped_at?: string | null
           profile_id?: string | null
+          owner_id?: string | null
+          card_id?: string | null
+          alias?: string | null
           tag_id?: string
           target_type?: Database["public"]["Enums"]["nfc_target_type"]
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "nfc_tags_card_owner_fkey"
+            columns: ["card_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "contact_cards"
+            referencedColumns: ["id", "user_id"]
+          },
           {
             foreignKeyName: "nfc_tags_profile_id_fkey"
             columns: ["profile_id"]
@@ -504,6 +526,10 @@ export type Database = {
       get_current_workshop_session: { Args: never; Returns: Json }
       join_workshop_session: { Args: { p_code: string }; Returns: Json }
       profile_owner_status: { Args: { p_profile_id: string }; Returns: string }
+        get_nfc_contact: { Args: { p_tag_id: string }; Returns: { display_name: string; phone_number: string | null; email: string | null; organization_name: string | null; job_title: string | null; website_url: string | null }[] }
+        save_contact_card: { Args: { p_card_id: string | null; p_data: Json }; Returns: string }
+        delete_contact_card: { Args: { p_card_id: string }; Returns: boolean }
+        set_nfc_destination: { Args: { p_tag_id: string; p_target: Database["public"]["Enums"]["nfc_target_type"]; p_custom_url?: string | null; p_card_id?: string | null; p_alias?: string | null; p_acknowledged?: boolean }; Returns: boolean }
         resolve_nfc_tag: {
           Args: { p_tag_id: string }
           Returns: { tag_status: string; public_slug: string | null; external_url: string | null }[]
@@ -515,7 +541,7 @@ export type Database = {
       verify_workshop_code: { Args: { p_code: string }; Returns: Json }
     }
     Enums: {
-        nfc_target_type: "profile" | "custom_url"
+        nfc_target_type: "profile" | "custom_url" | "contact_card" | "none"
       user_role: "participant" | "instructor" | "admin"
     }
     CompositeTypes: {
@@ -644,7 +670,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      nfc_target_type: ["profile", "custom_url"],
+      nfc_target_type: ["profile", "custom_url", "contact_card", "none"],
       user_role: ["participant", "instructor", "admin"],
     },
   },

@@ -59,11 +59,11 @@ export async function POST(request: NextRequest) {
   }
   const data = result.data;
   const code = data.result_code;
-  if ((code === "SUCCESS" || code === "ALREADY_BOUND") && data.public_slug && data.mapped_at) {
+  if ((code === "SUCCESS" || code === "ALREADY_BOUND") && data.mapped_at) {
     return respond(NextResponse.json({ success: true, data: {
       tag_id: input.data.tag_id,
       user_slug: data.public_slug,
-      public_url: new URL("/p/" + data.public_slug, request.url).href,
+      public_url: new URL("/t/" + input.data.tag_id, request.url).href,
       mapped_at: data.mapped_at,
     } }));
   }
