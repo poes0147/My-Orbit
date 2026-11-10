@@ -7,10 +7,11 @@ import PendingIndicator from "@/components/layouts/pending-indicator";
 const action = "inline-flex min-h-11 items-center justify-center rounded-xl border border-stone-300 bg-white px-4 text-sm font-semibold hover:bg-stone-100 disabled:opacity-50";
 const primary = "inline-flex min-h-11 items-center justify-center rounded-xl bg-stone-900 px-4 text-sm font-semibold text-white hover:bg-stone-800 disabled:opacity-50";
 
-export default function ProfilePublication({ published, slug, disabled, onChange }: {
+export default function ProfilePublication({ published, slug, disabled, hasUnsavedChanges = false, onChange }: {
   published: boolean;
   slug: string;
   disabled: boolean;
+  hasUnsavedChanges?: boolean;
   onChange: (published: boolean, slug: string) => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -23,6 +24,7 @@ export default function ProfilePublication({ published, slug, disabled, onChange
   const href = link?.slug === slug ? link.url : "/p/" + slug;
 
   async function change() {
+    if (busy || disabled || (!published && hasUnsavedChanges)) return;
     setBusy(true);
     setError("");
     try {
@@ -63,10 +65,11 @@ export default function ProfilePublication({ published, slug, disabled, onChange
       <h2 id="publication-title" className="font-semibold">프로필 공개</h2>
       <span className="rounded-full bg-stone-200 px-3 py-1 text-xs font-semibold text-stone-800">{published ? "공개 중" : "비공개"}</span>
     </div>
-    <p className="text-sm leading-6 text-stone-700">저장된 내용으로 발행해요. 수정한 내용은 먼저 저장해 주세요.</p>
+    <p className="text-sm leading-6 text-stone-700">{published ? "현재 저장된 프로필은 누구나 볼 수 있어요. 변경사항을 저장하면 공개 페이지에도 반영돼요." : "저장만 하면 본인만 볼 수 있어요. 공개 발행을 선택해야 다른 사람에게 보여요."}</p>
+    {hasUnsavedChanges && <p role="status" className="text-sm font-medium text-amber-900">아직 저장하지 않은 수정 내용이 있어요. 아래 ‘변경사항 저장’을 눌러 주세요.</p>}
     {published && <p className="text-sm text-stone-700">{href}</p>}
     <div className="flex flex-wrap gap-2">
-      <button type="button" className={published ? action : primary} disabled={disabled} onClick={() => {
+      <button type="button" className={published ? action : primary} disabled={disabled || busy || (!published && hasUnsavedChanges)} onClick={() => {
         setAgreed(false);
         setError("");
         setNotice("");
@@ -81,7 +84,7 @@ export default function ProfilePublication({ published, slug, disabled, onChange
     <dialog ref={dialog} aria-labelledby="publication-dialog-title" onCancel={event => { if (busy) event.preventDefault(); }}
       className="m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-lg overflow-y-auto rounded-2xl border border-stone-200 bg-white p-5 text-stone-950 backdrop:bg-stone-950/40">
       <h3 id="publication-dialog-title" className="text-lg font-semibold">{published ? "프로필 공개를 해제할까요?" : "내 프로필을 외부에 공개할까요?"}</h3>
-      {published ? <p className="mt-3 text-sm leading-6">기존 링크와 연락처 파일에 접속하면 404가 표시돼요. 작성한 내용은 보존되며 계속 편집하거나 다시 발행할 수 있어요.</p> : <>
+      {published ? <p className="mt-3 text-sm leading-6">기존 링크로는 다른 사람이 프로필과 연락처 파일을 볼 수 없게 돼요. 작성한 내용은 보존되며 계속 편집하거나 다시 발행할 수 있어요.</p> : <>
         <p className="mt-3 text-sm leading-6">발행하면 링크가 있는 누구나 저장된 프로필을 볼 수 있어요.</p>
         <ul className="mt-3 space-y-2 text-sm leading-6">
           <li><strong>공개</strong> · 공개 이름, 사진, 한 줄 소개, 핵심 역량, 자기소개, 프로젝트와 링크, 별도로 등록된 공개 연락처</li>
@@ -96,7 +99,7 @@ export default function ProfilePublication({ published, slug, disabled, onChange
       {error && <p role="alert" className="mt-3 text-sm text-red-800">{error}</p>}
       <div className="mt-4 flex flex-wrap justify-end gap-2">
         <button type="button" autoFocus className={action} disabled={busy} onClick={() => dialog.current?.close()}>취소</button>
-        <button type="button" className={primary} disabled={busy || (!published && !agreed)} onClick={() => void change()}>
+        <button type="button" className={primary} disabled={disabled || busy || (!published && (!agreed || hasUnsavedChanges))} onClick={() => void change()}>
           {published ? "공개 해제 확정" : "발행 확정"}
         </button>
       </div>

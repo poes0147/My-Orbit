@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
   const quota = await supabase.rpc("claim_project_card_attempt", { p_ip_hash: createHash("sha256").update(ip).digest("hex") });
   if (quota.error) return fail("프로젝트 카드 생성을 준비 중이에요.", 503);
-  if (!quota.data) return fail("1분에 최대 5번까지 생성할 수 있어요.", 429);
+  if (!quota.data) return fail("잠시 요청이 많아요. 개인별로 1분에 최대 5번 생성할 수 있으며, 같은 네트워크의 요청이 몰려도 잠시 제한될 수 있어요. 1분 후 다시 시도해 주세요.", 429);
 
   async function generate(onFirstToken: () => void) {
     const deadline = new AbortController();
