@@ -504,6 +504,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+        admin_issue_nfc_tag: {
+          Args: { p_request_id: string }
+          Returns: { tag_id: string; registration_code: string | null; created_at: string }[]
+        }
+        admin_list_nfc_tags: {
+          Args: { p_page?: number; p_limit?: number }
+          Returns: { tag_id: string; is_active: boolean; is_registered: boolean; created_at: string; registered_at: string | null; total_count: number }[]
+        }
         bind_nfc_tag: {
           Args: { p_tag_id: string; p_registration_code: string; p_ip_hash: string }
           Returns: { result_code: string; public_slug: string | null; mapped_at: string | null }[]

@@ -23,13 +23,13 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
-      - run: node --test scripts/test-admin-access.mjs
+      - run: node --test scripts/test-admin-access.mjs scripts/test-admin-nfc-api.mjs
       - run: node --test scripts/test-title-tags.mjs scripts/test-project-card.mjs scripts/test-profile-header.mjs scripts/test-profile-themes.mjs scripts/test-nfc-routing.mjs src/modules/public-profile/vcard.test.mjs
       - run: node scripts/test-builder-draft.mjs
       - run: node scripts/test-builder-rate-limit.mjs
       - run: node scripts/test-workshop-code.mjs
       - run: node scripts/test-resume-analysis.mjs
-      - run: node --test scripts/test-database.mjs
+      - run: node --test scripts/test-database.mjs scripts/test-admin-nfc.mjs
       - run: npm run build -- --webpack
       - name: Check client bundle for server credentials
         run: |

@@ -29,7 +29,7 @@ function loadProxy(role, { signedIn = true, roleError = false } = {}) {
   return proxyModule.exports.proxy;
 }
 
-const routes = ["/admin", "/admin/workshops", "/admin/clay-materials", "/admin/sessions"];
+const routes = ["/admin", "/admin/workshops", "/admin/clay-materials", "/admin/nfc-tags", "/admin/sessions"];
 test("anonymous admin routes preserve the intended destination at login", async () => {
   for (const path of routes) {
     const response = await loadProxy(null, { signedIn: false })(new NextRequest(`http://localhost:3000${path}`));
