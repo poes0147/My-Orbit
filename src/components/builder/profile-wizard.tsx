@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import StrengthAnalysisPanel from "./strength-analysis-panel";
 import SavedDraftEditor from "./saved-draft-editor";
 import StarObjectGuideViewer from "./star-object-guide-viewer";
 import PendingIndicator from "@/components/layouts/pending-indicator";
@@ -21,13 +22,14 @@ type Errors = DraftErrors;
 export default function ProfileWizard({ onSubmitDraft }: { onSubmitDraft?: (payload: WizardPayload) => void } = {}) {
   const context = useWorkspace();
   const [revision, setRevision] = useState(0);
+  const [strengthSelection, setStrengthSelection] = useState<{source:string;tags:string[]}>();
   const [editing, setEditing] = useState(false);
   const [generating, setGenerating] = useState(false);
   const onSaved = useCallback(() => setRevision(value => value + 1), []);
-  return <><WizardForm key={`${context.id}:${context.workshop?.sessionId ?? "personal"}`} storageKey={`orbit.wizard:${context.id}:${context.workshop?.sessionId ?? "personal"}`} workshopSessionId={context.workshop?.sessionId ?? null} onSubmitDraft={onSubmitDraft} onSaved={onSaved} editing={editing} onGenerating={setGenerating} /><SavedDraftEditor key={`editor:${context.id}:${context.workshop?.sessionId ?? "personal"}`} workshopSessionId={context.workshop?.sessionId ?? null} revision={revision} locked={generating} onEditingChange={setEditing} /></>;
+  return <><WizardForm key={`${context.id}:${context.workshop?.sessionId ?? "personal"}`} storageKey={`orbit.wizard:${context.id}:${context.workshop?.sessionId ?? "personal"}`} workshopSessionId={context.workshop?.sessionId ?? null} onSubmitDraft={onSubmitDraft} onSaved={onSaved} editing={editing} onGenerating={setGenerating} strengthSelection={strengthSelection} onStrengthSelection={setStrengthSelection} /><SavedDraftEditor key={`editor:${context.id}:${context.workshop?.sessionId ?? "personal"}`} workshopSessionId={context.workshop?.sessionId ?? null} revision={revision} locked={generating} onEditingChange={setEditing} onStrengthSelection={setStrengthSelection} /></>;
 }
 
-function WizardForm({ storageKey, workshopSessionId, onSubmitDraft, onSaved, editing, onGenerating }: { storageKey: string; workshopSessionId: string | null; onSubmitDraft?: (payload: WizardPayload) => void; onSaved: () => void; editing: boolean; onGenerating: (value: boolean) => void }) {
+function WizardForm({ storageKey, workshopSessionId, onSubmitDraft, onSaved, editing, onGenerating, strengthSelection, onStrengthSelection }: { strengthSelection?:{source:string;tags:string[]}; onStrengthSelection:(selection:{source:string;tags:string[]})=>void; storageKey: string; workshopSessionId: string | null; onSubmitDraft?: (payload: WizardPayload) => void; onSaved: () => void; editing: boolean; onGenerating: (value: boolean) => void }) {
   const notify = useFeedback();
   const generation = useProfileStream();
   const completeGuide = profileGenerationSchema.shape.object_guide.safeParse(generation.profile.object_guide);
@@ -38,6 +40,7 @@ function WizardForm({ storageKey, workshopSessionId, onSubmitDraft, onSaved, edi
   const [cardMessage, setCardMessage] = useState("");
   const cardInput = { project_name: draft.experience.trim(), role: draft.role.trim(), raw_problem: draft.situation.trim(), raw_action: draft.action.trim(), raw_result: draft.result.trim() };
   const cardSource = JSON.stringify(cardInput);
+  const currentStrengths = strengthSelection?.source === cardSource ? strengthSelection.tags : undefined;
   const currentCard = projectCardDraft?.source === cardSource ? projectCardDraft.card : undefined;
   const [step, setStep] = useState(0);
   const [review, setReview] = useState(false);
@@ -58,6 +61,7 @@ function WizardForm({ storageKey, workshopSessionId, onSubmitDraft, onSaved, edi
         const raw = sessionStorage.getItem(storageKey);
         const saved = restoreDraft(raw);
         if (saved) {
+          if (saved.strengthSelection) onStrengthSelection(saved.strengthSelection);
           setDraft(saved.draft); setStep(saved.step); setReview(saved.review);
           const card = projectCardSchema.safeParse(saved.projectCardDraft?.card);
           if (card.success && saved.projectCardDraft) setProjectCardDraft({ source: saved.projectCardDraft.source, card: card.data });
@@ -67,13 +71,13 @@ function WizardForm({ storageKey, workshopSessionId, onSubmitDraft, onSaved, edi
       setRestored(true);
     });
     return () => { active = false; };
-  }, [storageKey]);
+  }, [storageKey, onStrengthSelection]);
 
   useEffect(() => {
     if (!restored) return;
-    try { sessionStorage.setItem(storageKey, JSON.stringify({ version: 1, draft, step, review, projectCardDraft })); }
+    try { sessionStorage.setItem(storageKey, JSON.stringify({ version: 1, draft, step, review, projectCardDraft, strengthSelection })); }
     catch { Promise.resolve().then(() => setStorageMessage("임시 저장 공간이 부족하거나 차단됐어요. 화면을 나가기 전에 내용을 따로 보관해 주세요.")); }
-  }, [draft, step, review, projectCardDraft, restored, storageKey]);
+  }, [draft, step, review, projectCardDraft, strengthSelection, restored, storageKey]);
 
   useEffect(() => {
     if (firstRender.current) { firstRender.current = false; return; }
@@ -220,7 +224,7 @@ function WizardForm({ storageKey, workshopSessionId, onSubmitDraft, onSaved, edi
         {generation.status === "error" && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm leading-6 text-red-900">{generation.message}</p>}
         {editing && <p className="text-sm text-amber-900">아래에서 편집 중인 문구를 확인하고 저장한 뒤 새 초안을 만들어 주세요.</p>}
         <div className="flex flex-col gap-3 sm:flex-row">
-          <button type="button" disabled={generation.status === "streaming" || editing} onClick={() => void generation.generate(createWizardPayload(draft, workshopSessionId, currentCard))} className={`${buttonClass} flex-1 bg-stone-900 text-white enabled:hover:bg-stone-700 disabled:opacity-60`}>
+          <button type="button" disabled={generation.status === "streaming" || editing} onClick={() => void generation.generate({...createWizardPayload(draft, workshopSessionId, currentCard), ...(currentStrengths !== undefined ? {selectedCompetencies:currentStrengths} : {})})} className={`${buttonClass} flex-1 bg-stone-900 text-white enabled:hover:bg-stone-700 disabled:opacity-60`}>
             {generation.status === "streaming" ? "초안 만드는 중…" : generation.status === "complete" || generation.status === "fallback" || generation.status === "error" ? "다시 초안 만들기" : "AI 초안 만들기"}
           </button>
           {generation.status === "streaming" && <button type="button" onClick={generation.cancel} className={`${buttonClass} border border-stone-300`}>취소</button>}
@@ -244,6 +248,9 @@ function WizardForm({ storageKey, workshopSessionId, onSubmitDraft, onSaved, edi
         </button>
         {cardBusy && <PendingIndicator message="프로젝트 경험을 세 문장으로 정리하고 있어요." />}
         {cardMessage && <p role="status" className="text-sm text-stone-700">{cardMessage}</p>}
+        <div className="min-w-0 md:col-span-2"><StrengthAnalysisPanel experiences={[{id:'experience',title:draft.experience,role:draft.role,problem:draft.situation,action:draft.action,outcome:draft.result}]} disabled={cardBusy} onApply={tags=>onStrengthSelection({source:cardSource,tags})}/>
+          {strengthSelection && <p role="status" className="mt-2 text-sm text-stone-600">{currentStrengths === undefined ? '경험이 바뀌어 이전 강점 선택을 적용하지 않아요. 다시 분석해 주세요.' : `초안에 적용할 강점: ${currentStrengths.join(', ') || '선택 없음'}`}</p>}
+        </div>
         {currentCard && <div className="min-w-0 md:col-span-2">
           <ProjectCardEditor card={currentCard} disabled={cardBusy} onChange={card => setProjectCardDraft({ source: cardSource, card })} />
         </div>}

@@ -4,10 +4,10 @@ import { fallbackTitleTags, titleTagsSchema } from "../src/lib/builder/title-tag
 
 const identity = { professionalTitle: "전시 운영과 협업을 조율하는 실행가", coreCompetencies: ["전시 운영", "협업", "동선 설계"] };
 
-test("validates exactly three distinct competencies and rejects out-of-range text", () => {
+test("validates up to three distinct competencies and rejects out-of-range text", () => {
   assert.ok(titleTagsSchema.safeParse(identity).success);
+  for(const tags of [[],["기획"],["기획","운영"]]) assert.ok(titleTagsSchema.safeParse({...identity,coreCompetencies:tags}).success);
   for (const tags of [
-    ["기획", "운영"],
     ["기획", "운영", "협업", "설계"],
     ["전시 운영", "전시운영", "기획"],
     ["AI", "ＡＩ", "기획"],
