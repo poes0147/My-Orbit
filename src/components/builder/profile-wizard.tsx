@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import StrengthAnalysisPanel from "./strength-analysis-panel";
+import FollowupInterview from "./followup-interview";
 import SavedDraftEditor from "./saved-draft-editor";
 import StarObjectGuideViewer from "./star-object-guide-viewer";
 import PendingIndicator from "@/components/layouts/pending-indicator";
@@ -255,6 +256,7 @@ function WizardForm({ storageKey, workshopSessionId, onSubmitDraft, onSaved, edi
           <ProjectCardEditor card={currentCard} disabled={cardBusy} onChange={card => setProjectCardDraft({ source: cardSource, card })} />
         </div>}
       </>}
+      {step < 2 && <div className="min-w-0 md:col-span-2"><FollowupInterview storageKey={`${storageKey}:followup`} experience={{experience:draft.experience,situation:draft.situation,role:draft.role,action:draft.action,result:draft.result}} disabled={cardBusy} onApply={experience=>{generation.cancel();submitted.current=false;setErrors({});setDraft(previous=>({...previous,...experience}));}}/></div>}
       {step === 2 && <>
         <fieldset aria-describedby={`values-hint${errors.values ? " values-error" : ""}`}>
           <legend className="text-sm font-semibold">나에게 중요한 가치는 무엇인가요? (필수)</legend>

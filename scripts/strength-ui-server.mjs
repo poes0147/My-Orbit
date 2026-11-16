@@ -7,7 +7,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const { webpack } = require("next/dist/compiled/webpack/webpack");
 await new Promise((done, fail) => webpack({
-  mode: "development", devtool: false, entry: resolve("scripts/strength-ui-entry.tsx"),
+  mode: "development", devtool: false, entry: resolve(process.env.UI_ENTRY ?? "scripts/strength-ui-entry.tsx"),
   output: { path: resolve("test-artifacts/strength-ui"), filename: "app.js" },
   resolve: { extensions: [".tsx", ".ts", ".js"], alias: {
     "@": resolve("src"), "next/link$": resolve("scripts/fixtures/admin-next-link.tsx"),
