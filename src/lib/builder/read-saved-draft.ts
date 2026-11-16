@@ -1,7 +1,7 @@
 import "server-only";
 import type { createSupabaseServerClient } from "@/lib/supabase/server";
 import { editableTextSchema } from "./editable-draft";
-import { profileGenerationSchema } from "./profile-generation";
+import { interviewRequestSchema, profileGenerationSchema } from "./profile-generation";
 
 export async function readSavedDraft(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
@@ -21,10 +21,11 @@ export async function readSavedDraft(
   if (!original.success) return { status: 422, message: "저장된 초안 형식을 확인하지 못했어요. 새 초안을 만들어 주세요." } as const;
   const current = editableTextSchema.safeParse(data.answers?.edited_draft ?? data.answers?.generated_draft);
   if (!current.success) return { status: 422, message: "수정본을 읽지 못했어요. 다시 시도해 주세요." } as const;
+  const sourceProject = interviewRequestSchema.shape.stepData.shape.project.safeParse(data.answers?.step_responses?.project);
   const guide = profileGenerationSchema.shape.object_guide.safeParse(data.answers?.generated_draft?.object_guide);
   return {
     status: 200,
     workshopSessionId: data.workshop_session_id as string | null,
-    draft: { id: data.id, updatedAt: data.updated_at, original: original.data, current: current.data, ...(guide.success ? { objectGuide: guide.data } : {}) },
+    draft: { ...(sourceProject.success ? {sourceProject:sourceProject.data} : {}), id: data.id, updatedAt: data.updated_at, original: original.data, current: current.data, ...(guide.success ? { objectGuide: guide.data } : {}) },
   } as const;
 }

@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      // BEGIN strength analysis generated types
+      strength_analyses: {
+        Row: {
+          id: string
+          user_id: string
+          input_hash: string
+          model_name: string
+          taxonomy_version: string
+          prompt_version: string
+          rule_version: string
+          analyzed_strengths: Json
+          follow_up_questions: Json
+          created_at: string
+          expires_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          input_hash: string
+          model_name: string
+          taxonomy_version?: string
+          prompt_version?: string
+          rule_version?: string
+          analyzed_strengths: Json
+          follow_up_questions?: Json
+          created_at?: string
+          expires_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          input_hash?: string
+          model_name?: string
+          taxonomy_version?: string
+          prompt_version?: string
+          rule_version?: string
+          analyzed_strengths?: Json
+          follow_up_questions?: Json
+          created_at?: string
+          expires_at?: string
+        }
+        Relationships: []
+      }
+      // END strength analysis generated types
+
       ai_interview_sessions: {
         Row: {
           answers: Json
@@ -504,6 +549,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_strength_analysis_attempt: { Args: Record<PropertyKey, never>; Returns: boolean }
         admin_issue_nfc_tag: {
           Args: { p_request_id: string }
           Returns: { tag_id: string; registration_code: string | null; created_at: string }[]

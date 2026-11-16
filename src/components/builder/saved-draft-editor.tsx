@@ -1,5 +1,6 @@
 "use client";
 
+import StrengthAnalysisPanel from "./strength-analysis-panel";
 import ProjectCardEditor from "./project-card-editor";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -63,7 +64,7 @@ function EditableBlock({ label, value, original, max, multiline, field, onChange
   </div>;
 }
 
-function DraftEditor({ draft, onEditingChange }: { draft: SavedDraft; onEditingChange: (value: boolean) => void }) {
+function DraftEditor({ draft, onEditingChange, onStrengthSelection }: { draft: SavedDraft; onEditingChange: (value: boolean) => void; onStrengthSelection?:(selection:{source:string;tags:string[]})=>void }) {
   const [current, setCurrent] = useState(draft.current);
   const [saved, setSaved] = useState(draft.current);
   const [version, setVersion] = useState(draft.updatedAt);
@@ -73,10 +74,15 @@ function DraftEditor({ draft, onEditingChange }: { draft: SavedDraft; onEditingC
   const [failed, setFailed] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [fallback, setFallback] = useState(false);
+  useEffect(()=>{
+    const project=draft.sourceProject;
+    if(project&&onStrengthSelection) onStrengthSelection({source:JSON.stringify({project_name:project.title,role:project.role,raw_problem:project.problem,raw_action:project.action,raw_result:project.outcome}),tags:saved.competency_tags});
+  },[draft.sourceProject,saved.competency_tags,onStrengthSelection]);
   const saving = useRef(false);
   const dirty = JSON.stringify(current) !== JSON.stringify(saved);
   const blocked = busy || regenerating || Object.values(pending).some(Boolean);
   const identityDirty = current.headline !== saved.headline
+    || current.competency_tags.length !== saved.competency_tags.length
     || current.competency_tags.some((tag, index) => tag !== saved.competency_tags[index]);
   const identityValid = titleTagsSchema.safeParse({ professionalTitle: current.headline, coreCompetencies: current.competency_tags }).success;
   useEffect(() => { onEditingChange(dirty || blocked); return () => onEditingChange(false); }, [dirty, blocked, onEditingChange]);
@@ -131,7 +137,7 @@ function DraftEditor({ draft, onEditingChange }: { draft: SavedDraft; onEditingC
       });
       const body = z.object({ success: z.boolean(), data: titleTagsSchema.optional(), isFallback: z.boolean().optional(), message: z.string().optional() }).parse(await response.json());
       if (!response.ok || !body.success || !body.data) throw new Error(body.message ?? "타이틀과 역량을 다시 만들지 못했어요.");
-      update({ headline: body.data.professionalTitle, competency_tags: body.data.coreCompetencies });
+      update({ headline: body.data.professionalTitle });
       setFallback(body.isFallback === true);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "잠시 후 다시 시도해 주세요.");
@@ -142,16 +148,17 @@ function DraftEditor({ draft, onEditingChange }: { draft: SavedDraft; onEditingC
   const blockProps = (key: string) => ({ onPending: (value: boolean) => setPending(previous => ({ ...previous, [key]: value })) });
   return <div className="space-y-5">
     {busy && <PendingIndicator message="수정한 초안을 저장하고 있어요." />}
-    {regenerating && <PendingIndicator message="타이틀과 핵심 역량을 만들고 있어요." />}
-    {fallback && <p role="status" className="text-sm text-stone-700">입력한 키워드로 기본 타이틀과 역량을 만들었어요.</p>}
-    <button type="button" className={button} disabled={blocked || identityDirty} onClick={() => void regenerate()}>타이틀·핵심 역량 다시 생성</button>
+    {regenerating && <PendingIndicator message="타이틀을 만들고 있어요." />}
+    {fallback && <p role="status" className="text-sm text-stone-700">입력한 키워드로 기본 타이틀을 만들었어요. 선택한 강점은 유지돼요.</p>}
+    <button type="button" className={button} disabled={blocked || identityDirty} onClick={() => void regenerate()}>타이틀 다시 생성</button>
+    <StrengthAnalysisPanel interviewSessionId={draft.id} disabled={blocked || dirty} onApply={competency_tags => update({competency_tags})}/>
     <div className={`space-y-5 ${busy || regenerating ? "pointer-events-none opacity-60" : ""}`} inert={busy || regenerating}>
       <EditableBlock label="한 줄 소개" field="title" max={60} value={current.headline} original={draft.original.headline} onChange={headline => update({ headline })} {...blockProps("headline")} />
-      <div className="grid min-w-0 gap-5 lg:grid-cols-3">{current.competency_tags.map((value, index) => <EditableBlock key={index} label={`핵심 역량 ${index + 1}`} field="skill_tag" max={15} value={value} original={draft.original.competency_tags[index]} onChange={tag => update({ competency_tags: current.competency_tags.map((item, i) => i === index ? tag : item) })} {...blockProps(`tag${index}`)} />)}</div>
+      <div className="grid min-w-0 gap-5 lg:grid-cols-3">{current.competency_tags.map((value, index) => <EditableBlock key={index} label={`핵심 역량 ${index + 1}`} field="skill_tag" max={15} value={value} original={draft.original.competency_tags[index] ?? value} onChange={tag => update({ competency_tags: current.competency_tags.map((item, i) => i === index ? tag : item) })} {...blockProps(`tag${index}`)} />)}</div>
       {current.project_card ? <ProjectCardEditor card={current.project_card} disabled={busy} onChange={project_card => update({ project_card })} /> : <EditableBlock label="프로젝트 요약" field="project_summary" multiline max={300} value={current.project_summary} original={draft.original.project_summary} onChange={project_summary => update({ project_summary })} {...blockProps("summary")} />}
     </div>
     {draft.objectGuide && <StarObjectGuideViewer guide={draft.objectGuide} />}
-    {identityDirty && !identityValid && <p role="alert" className="text-sm text-red-800">타이틀은 5~60자, 핵심 역량은 서로 다른 2~15자 태그 3개로 입력해 주세요.</p>}
+    {identityDirty && !identityValid && <p role="alert" className="text-sm text-red-800">타이틀은 5~60자, 핵심 역량은 서로 다른 2~15자 태그 최대 3개로 입력해 주세요.</p>}
     <div className="flex flex-wrap items-center gap-3"><button type="button" disabled={blocked || !dirty || (identityDirty && !identityValid)} className={`${button} bg-stone-900 text-white`} onClick={() => {
       const parsed = editableTextSchema.safeParse(current);
       if (parsed.success) void save(parsed.data);
@@ -165,7 +172,7 @@ function DraftEditor({ draft, onEditingChange }: { draft: SavedDraft; onEditingC
 
 const ignoreEditingChange = () => {};
 
-export default function SavedDraftEditor({ workshopSessionId, revision, locked, onEditingChange = ignoreEditingChange }: { workshopSessionId: string | null; revision: number; locked: boolean; onEditingChange?: (value: boolean) => void }) {
+export default function SavedDraftEditor({ workshopSessionId, revision, locked, onEditingChange = ignoreEditingChange, onStrengthSelection }: { workshopSessionId: string | null; revision: number; locked: boolean; onEditingChange?: (value: boolean) => void; onStrengthSelection?:(selection:{source:string;tags:string[]})=>void }) {
   const [draft, setDraft] = useState<SavedDraft | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -189,6 +196,6 @@ export default function SavedDraftEditor({ workshopSessionId, revision, locked, 
   return <section aria-label="저장된 프로필 초안 편집" className="mt-8 min-w-0 scroll-mt-24 space-y-5 rounded-2xl border border-stone-200 bg-stone-50 p-4 sm:p-6">
     <div><h2 className="text-xl font-semibold">내 말로 다듬기</h2><p className="mt-2 text-sm leading-6 text-stone-600">타이틀과 핵심 역량을 수정하면 초안에 자동 저장돼요. 프로젝트 수정은 초안 저장 버튼을 눌러 주세요.</p></div>
     {locked && <p role="status" className="text-sm text-stone-600">새 초안을 만드는 동안 편집은 잠시 기다려 주세요.</p>}
-    <div inert={locked} className={locked ? "opacity-60" : ""}>{loading ? <p role="status">저장된 초안을 불러오고 있어요.</p> : error ? <div><p role="alert" className="text-sm text-red-800">{error}</p><button type="button" className={`${button} mt-3`} onClick={() => setRetry(value => value + 1)}>다시 불러오기</button></div> : draft ? <DraftEditor key={`${draft.id}:${draft.updatedAt}`} draft={draft} onEditingChange={onEditingChange} /> : <p className="text-sm text-stone-600">아직 저장된 초안이 없어요. 위 질문에 답하고 초안을 먼저 만들어 주세요.</p>}</div>
+    <div inert={locked} className={locked ? "opacity-60" : ""}>{loading ? <p role="status">저장된 초안을 불러오고 있어요.</p> : error ? <div><p role="alert" className="text-sm text-red-800">{error}</p><button type="button" className={`${button} mt-3`} onClick={() => setRetry(value => value + 1)}>다시 불러오기</button></div> : draft ? <DraftEditor key={`${draft.id}:${draft.updatedAt}`} draft={draft} onEditingChange={onEditingChange} onStrengthSelection={onStrengthSelection} /> : <p className="text-sm text-stone-600">아직 저장된 초안이 없어요. 위 질문에 답하고 초안을 먼저 만들어 주세요.</p>}</div>
   </section>;
 }
