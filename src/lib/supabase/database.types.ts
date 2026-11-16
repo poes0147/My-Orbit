@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      // BEGIN followup generated types
+      ai_followup_sessions: {
+        Row: {
+          id: string
+          user_id: string
+          base_experience: Json
+          qa_history: Json
+          revision: number
+          status: string
+          created_at: string
+          expires_at: string
+          applied_at: string | null
+          confirmed_experience: Json | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          base_experience: Json
+          qa_history?: Json
+          revision?: number
+          status?: string
+          created_at?: string
+          expires_at?: string
+          applied_at?: string | null
+          confirmed_experience?: Json | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          base_experience?: Json
+          qa_history?: Json
+          revision?: number
+          status?: string
+          created_at?: string
+          expires_at?: string
+          applied_at?: string | null
+          confirmed_experience?: Json | null
+        }
+        Relationships: []
+      }
+      // END followup generated types
+
       // BEGIN strength analysis generated types
       strength_analyses: {
         Row: {
@@ -549,6 +591,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_followup_attempt: { Args: Record<PropertyKey, never>; Returns: boolean }
       claim_strength_analysis_attempt: { Args: Record<PropertyKey, never>; Returns: boolean }
         admin_issue_nfc_tag: {
           Args: { p_request_id: string }
