@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { profileGenerationSchema } from "./profile-generation";
+import { interviewRequestSchema, profileGenerationSchema } from "./profile-generation";
 
 export const editableTextSchema = profileGenerationSchema.pick({ headline: true, competency_tags: true, project_summary: true, project_card: true });
 export type EditableText = z.infer<typeof editableTextSchema>;
@@ -7,6 +7,7 @@ export const savedDraftSchema = z.object({
   id: z.string().uuid(), updatedAt: z.string(),
   original: editableTextSchema, current: editableTextSchema,
   objectGuide: profileGenerationSchema.shape.object_guide.optional(),
+  sourceProject: interviewRequestSchema.shape.stepData.shape.project.optional(),
 });
 export type SavedDraft = z.infer<typeof savedDraftSchema>;
 export const rewriteSchema = z.object({

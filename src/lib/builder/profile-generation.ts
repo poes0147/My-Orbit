@@ -1,9 +1,11 @@
 import { z } from "zod";
 import { projectCardSchema } from "./project-card";
 import { recommendedClaySchema } from "./clay-recommendation";
-import { fallbackTitleTags } from "./title-tags";
+import { selectedStrengthTagsSchema } from "../strengths/schema";
+
 
 export const interviewRequestSchema = z.object({
+  selectedCompetencies: selectedStrengthTagsSchema.optional(),
   projectCard: projectCardSchema.optional(),
   workshopSessionId: z.string().uuid().nullable(),
   stepData: z.object({
@@ -32,7 +34,7 @@ export const defaultShapingSteps = [
 
 export const profileGenerationSchema = z.object({
   headline: z.string().trim().min(1).max(60),
-  competency_tags: z.array(z.string().trim().min(1).max(20)).length(3),
+  competency_tags: z.array(z.string().trim().min(1).max(20)).max(3),
   project_card: projectCardSchema.optional(),
   project_summary: z.string().trim().min(1).max(300),
   object_guide: z.object({
@@ -58,8 +60,8 @@ export const profileGenerationJsonSchema = {
     competency_tags: {
       type: "array",
       items: { type: "string", description: "서로 다른 한국어 명사형 역량 키워드, 2~10자 권장, 최대 15자" },
-      minItems: 3,
-      maxItems: 3,
+      minItems: 0,
+      maxItems: 0,
     },
     project_summary: { type: "string", description: "STAR 방식 한국어 프로젝트 요약, 300자 이하" },
     object_guide: {
@@ -89,7 +91,6 @@ const toneDescriptions = {
 
 export function createFallbackProfile(input: InterviewRequest): GeneratedProfile {
   const project = input.stepData.project;
-  const identity = fallbackTitleTags(input.stepData.keywords, input.stepData.persona.tone);
   const headline = `${project.role}로 ${project.title}을 만들어가는 사람`.replace(/\s+/g, " ").slice(0, 60);
   const summary = `${project.problem} 문제를 해결하기 위해 ${project.role}로서 ${project.action}을 실천했습니다. 그 결과 ${project.outcome}`.slice(0, 300);
   const colors = {
@@ -102,7 +103,7 @@ export function createFallbackProfile(input: InterviewRequest): GeneratedProfile
 
   return profileGenerationSchema.parse({
     headline,
-    competency_tags: identity.coreCompetencies,
+    competency_tags: input.selectedCompetencies ?? [],
     project_summary: summary,
     object_guide: {
       primary_color: primary,
@@ -128,7 +129,7 @@ export function buildProfilePrompt(input: InterviewRequest) {
     `상황/문제: ${input.stepData.project.problem}`,
     `행동: ${input.stepData.project.action}`,
     `결과/배움: ${input.stepData.project.outcome}`,
-    "역량 키워드는 입력에 드러난 강점을 세 개로 정리하세요. 조형 가이드에는 경험을 상징하는 행성 형태 이름, 그 의미, 색 배합비, 초보자가 실행할 성형 순서 3단계를 짧게 작성하세요. 하드웨어 조립이나 가열 방법은 제안하지 마세요.",
+    "역량 키워드는 별도 근거 분석과 사용자 확인으로 채우므로 competency_tags는 빈 배열로 반환하세요. 조형 가이드에는 경험을 상징하는 행성 형태 이름, 그 의미, 색 배합비, 초보자가 실행할 성형 순서 3단계를 짧게 작성하세요. 하드웨어 조립이나 가열 방법은 제안하지 마세요.",
   ].join("\n");
 }
 

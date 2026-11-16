@@ -10,7 +10,7 @@ export default function AdminHomePage() {
         className="flex flex-col items-start rounded-2xl border border-admin-border bg-admin-surface p-6 hover:border-admin-accent sm:p-8">
         <h2 className="text-xl font-semibold">{item.label}</h2>
         <p className="mt-3 max-w-md text-sm leading-7 text-admin-muted">{item.description}</p>
-        <span className="mt-8 text-sm font-semibold text-admin-accent underline underline-offset-4">{item.href === "/admin/workshops" ? "코드 관리 열기" : "클레이 관리 열기"}</span>
+        <span className="mt-8 text-sm font-semibold text-admin-accent underline underline-offset-4">{item.label} 열기</span>
       </Link>)}
     </div>
   </>;

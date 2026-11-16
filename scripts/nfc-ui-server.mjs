@@ -13,18 +13,22 @@ const { NextRequest } = require("next/server");
 const { webpack } = require("next/dist/compiled/webpack/webpack");
 const db = await createLocalDatabase();
 const owner = "10000000-0000-4000-8000-000000000001";
+const admin = "10000000-0000-4000-8000-000000000002";
+let actor = owner;
+await db.query("insert into auth.users(id,email) values($1,'admin@example.invalid')", [admin]);
+await db.query("update public.users set role='admin' where id=$1", [admin]);
 await db.query("insert into auth.users(id,email) values($1,'fixture@example.invalid')", [owner]);
 const issued = (await db.query("select * from private.issue_nfc_tag()")).rows[0];
 await db.query("select * from private.issue_nfc_tag()");
-console.log("LOCAL ONLY tag/claim:", issued.tag_id, issued.registration_code);
+console.log("Local disposable NFC fixtures initialized.");
 
-const rpcNames = new Set(["save_contact_card", "delete_contact_card", "set_nfc_destination", "get_nfc_contact", "resolve_nfc_tag", "bind_nfc_tag"]);
+const rpcNames = new Set(["admin_issue_nfc_tag", "admin_list_nfc_tags", "save_contact_card", "delete_contact_card", "set_nfc_destination", "get_nfc_contact", "resolve_nfc_tag", "bind_nfc_tag"]);
 function resultQuery(action) {
   const run = async () => { try { return { data: JSON.parse(JSON.stringify(await action())), error: null }; } catch (error) { return { data: null, error: { code: error.code } }; } };
   return { then: (ok, fail) => run().then(ok, fail), single: async () => { const r = await run(); return { ...r, data: Array.isArray(r.data) ? r.data[0] ?? null : r.data }; }, maybeSingle: async () => { const r = await run(); return { ...r, data: Array.isArray(r.data) ? r.data[0] ?? null : r.data }; } };
 }
 const client = {
-  auth: { getUser: async () => ({ data: { user: { id: owner } }, error: null }) },
+  auth: { getUser: async () => ({ data: { user: { id: actor } }, error: null }) },
   rpc(name, args) {
     if (!rpcNames.has(name)) throw new Error("Unexpected RPC");
     const entries = Object.entries(args);
@@ -35,7 +39,7 @@ const client = {
     });
   },
   from(table) {
-    if (!["nfc_tags", "contact_cards"].includes(table)) throw new Error("Unexpected table");
+    if (!["users", "nfc_tags", "contact_cards"].includes(table)) throw new Error("Unexpected table");
     return { select(columns) {
       if (!/^[a-z_,]+$/.test(columns)) throw new Error("Invalid columns");
       return { eq(column, value) {
@@ -50,7 +54,7 @@ function load(file) {
   if (cache.has(file)) return cache.get(file);
   const exports = {}; cache.set(file, exports);
   const source = ts.transpileModule(readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  runInNewContext(source, { exports, Response, Request, URL, TextEncoder, console, require(name) {
+  runInNewContext(source, { exports, Response, Request, URL, TextEncoder, console, process: {env:{}}, require(name) {
     if (name === "server-only") return {};
     if (name === "@/lib/supabase/request-client") return { createRequestClient: () => ({ supabase: client, respond: response => { response.headers.set("cache-control", "private, no-store"); return response; } }) };
     if (name === "@/lib/supabase/public-client") return { createPublicClient: () => client };
@@ -65,6 +69,7 @@ const destination = load(resolve("src/app/api/tags/[tagId]/destination/route.ts"
 const binding = load(resolve("src/app/api/tags/bind/route.ts"));
 const contact = load(resolve("src/app/t/[tag_id]/contact/route.ts"));
 const routing = load(resolve("src/app/t/[tag_id]/route.ts"));
+const adminNfc = load(resolve("src/lib/admin/nfc-api.ts"));
 await new Promise((done, fail) => webpack({
   mode: "development", devtool: false, entry: resolve("scripts/nfc-ui-entry.tsx"),
   output: { path: resolve("test-artifacts/nfc-ui"), filename: "app.js" },
@@ -78,8 +83,9 @@ createServer((req, res) => { queue = queue.then(async () => {
     if (req.url === "/app.js") { res.setHeader("Content-Type", "text/javascript"); res.end(readFileSync("test-artifacts/nfc-ui/app.js")); return; }
     if (req.url === "/app.css") { res.setHeader("Content-Type", "text/css"); res.end(readdirSync(".next/static/css").filter(f => f.endsWith(".css")).map(f => readFileSync(join(".next/static/css", f), "utf8")).join("\n")); return; }
     const publicRequest = /^\/t\//.test(req.url);
+    actor = req.url.startsWith('/api/admin/') ? admin : owner;
     await db.exec("reset role");
-    await db.query("select set_config('request.jwt.claim.sub',$1,false)", [publicRequest ? "" : owner]);
+    await db.query("select set_config('request.jwt.claim.sub',$1,false)", [publicRequest ? "" : actor]);
     await db.exec(publicRequest ? "set role anon" : "set role authenticated");
     if (req.url === "/fixture-state") {
       const tags = (await db.query("select tag_id,is_active,target_type,custom_url,card_id,alias,updated_at from public.nfc_tags")).rows;
@@ -93,7 +99,8 @@ createServer((req, res) => { queue = queue.then(async () => {
       const request = new NextRequest("http://127.0.0.1:3106" + req.url, { method: req.method, headers: req.headers, ...(body ? { body } : {}) });
       const id = req.url.split("/")[2];
       let response;
-      if (req.url === "/api/contact-cards") response = await cards[req.method](request);
+      if (req.url.startsWith('/api/admin/nfc-tags')) response = await adminNfc.manageAdminNfc(request, req.method === 'POST' ? 'issue' : 'list');
+      else if (req.url === "/api/contact-cards") response = await cards[req.method](request);
       else if (req.url === "/api/tags/bind") response = await binding.POST(request);
       else if (/^\/api\/tags\/[^/]+\/destination$/.test(req.url)) response = await destination.PATCH(request, { params: Promise.resolve({ tagId: req.url.split("/")[3] }) });
       else if (req.url.endsWith("/contact")) response = await contact.GET(request, { params: Promise.resolve({ tag_id: id }) });

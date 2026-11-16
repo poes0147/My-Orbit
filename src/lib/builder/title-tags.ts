@@ -2,9 +2,9 @@ import { z } from "zod";
 
 export const titleTagsSchema = z.object({
   professionalTitle: z.string().trim().min(5).max(60).regex(/^[^\r\n]+$/),
-  coreCompetencies: z.array(z.string().trim().min(2).max(15).regex(/^[^\r\n]+$/)).length(3)
-    .refine(tags => new Set(tags.map(tag => tag.normalize("NFKC").toLowerCase().replace(/\s+/g, ""))).size === 3,
-      "서로 다른 핵심 역량 3개를 입력해 주세요."),
+  coreCompetencies: z.array(z.string().trim().min(2).max(15).regex(/^[^\r\n]+$/)).max(3)
+    .refine(tags => new Set(tags.map(tag => tag.normalize("NFKC").toLowerCase().replace(/\s+/g, ""))).size === tags.length,
+      "서로 다른 핵심 역량 최대 3개를 입력해 주세요."),
 });
 
 export type TitleTags = z.infer<typeof titleTagsSchema>;

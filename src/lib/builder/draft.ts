@@ -31,7 +31,7 @@ export type WizardPayload = ReturnType<typeof createWizardPayload>;
 export function restoreDraft(raw: string | null) {
   if (!raw) return null;
   try {
-    const result = z.object({ version: z.literal(1), draft: storageDraftSchema, step: z.number().int().min(0).max(2), review: z.boolean(), projectCardDraft: z.object({ source: z.string(), card: z.unknown() }).optional().catch(undefined) }).safeParse(JSON.parse(raw));
+    const result = z.object({ version: z.literal(1), draft: storageDraftSchema, step: z.number().int().min(0).max(2), review: z.boolean(), strengthSelection: z.object({source:z.string(), tags:z.array(z.string().trim().min(2).max(15)).max(3)}).optional().catch(undefined), projectCardDraft: z.object({ source: z.string(), card: z.unknown() }).optional().catch(undefined) }).safeParse(JSON.parse(raw));
     return result.success ? result.data : null;
   } catch { return null; }
 }

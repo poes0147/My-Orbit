@@ -167,7 +167,7 @@ async function streamOpenAi(
         if (!identity.success) {
           const fallback = fallbackTitleTags(input.stepData.keywords, input.stepData.persona.tone);
           parsed.data.headline = fallback.professionalTitle;
-          parsed.data.competency_tags = fallback.coreCompetencies;
+          parsed.data.competency_tags = [];
         }
         return { profile: parsed.data, selections: guide?.color_selections };
       }
@@ -250,6 +250,7 @@ export async function POST(request: NextRequest) {
           if (timeout) clearTimeout(timeout);
           timeout = undefined;
           if (cancelled) return;
+          result.profile.competency_tags = input.selectedCompetencies ?? [];
           const latestCatalog = await readAvailableClay(supabase).catch(() => []);
           attachClayColors(result.profile, result.selections, latestCatalog);
           if (input.projectCard) result.profile.project_card = input.projectCard;
